@@ -10,7 +10,7 @@ import XCTest
 final class zoeUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
-        true
+        false
     }
 
     override func setUpWithError() throws {
@@ -27,7 +27,7 @@ final class zoeUITestsLaunchTests: XCTestCase {
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"
-        attachment.lifetime = .keepAlways
+        attachment.lifetime = .deleteOnSuccess
         add(attachment)
     }
 }

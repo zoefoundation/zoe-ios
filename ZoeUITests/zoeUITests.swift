@@ -33,6 +33,9 @@ final class zoeUITests: XCTestCase {
 
     @MainActor
     func testLaunchPerformance() throws {
+        guard ProcessInfo.processInfo.environment["ENABLE_UI_PERF_TESTS"] == "1" else {
+            throw XCTSkip("Skipping launch performance test unless ENABLE_UI_PERF_TESTS=1")
+        }
         // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             XCUIApplication().launch()

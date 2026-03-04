@@ -30,7 +30,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		4F973EB12F58B0E00054D9E3 /* Exceptions for "zoe" folder in "zoe" target */ = {
+		4F973EB12F58B0E00054D9E3 /* Exceptions for "Zoe" folder in "zoe" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -40,20 +40,20 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4F973E902F58B0DD0054D9E3 /* zoe */ = {
+		4F973E902F58B0DD0054D9E3 /* Zoe */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				4F973EB12F58B0E00054D9E3 /* Exceptions for "zoe" folder in "zoe" target */,
+				4F973EB12F58B0E00054D9E3 /* Exceptions for "Zoe" folder in "zoe" target */,
 			);
 			path = Zoe;
 			sourceTree = "<group>";
 		};
-		4F973EA22F58B0DF0054D9E3 /* zoeTests */ = {
+		4F973EA22F58B0DF0054D9E3 /* ZoeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ZoeTests;
 			sourceTree = "<group>";
 		};
-		4F973EAC2F58B0E00054D9E3 /* zoeUITests */ = {
+		4F973EAC2F58B0E00054D9E3 /* ZoeUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ZoeUITests;
 			sourceTree = "<group>";
@@ -88,9 +88,9 @@
 		4F973E852F58B0DD0054D9E3 = {
 			isa = PBXGroup;
 			children = (
-				4F973E902F58B0DD0054D9E3 /* zoe */,
-				4F973EA22F58B0DF0054D9E3 /* zoeTests */,
-				4F973EAC2F58B0E00054D9E3 /* zoeUITests */,
+				4F973E902F58B0DD0054D9E3 /* Zoe */,
+				4F973EA22F58B0DF0054D9E3 /* ZoeTests */,
+				4F973EAC2F58B0E00054D9E3 /* ZoeUITests */,
 				4F973E8F2F58B0DD0054D9E3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -121,7 +121,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4F973E902F58B0DD0054D9E3 /* zoe */,
+				4F973E902F58B0DD0054D9E3 /* Zoe */,
 			);
 			name = zoe;
 			packageProductDependencies = (
@@ -144,7 +144,7 @@
 				4F973EA12F58B0DF0054D9E3 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				4F973EA22F58B0DF0054D9E3 /* zoeTests */,
+				4F973EA22F58B0DF0054D9E3 /* ZoeTests */,
 			);
 			name = zoeTests;
 			packageProductDependencies = (
@@ -167,7 +167,7 @@
 				4F973EAB2F58B0E00054D9E3 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				4F973EAC2F58B0E00054D9E3 /* zoeUITests */,
+				4F973EAC2F58B0E00054D9E3 /* ZoeUITests */,
 			);
 			name = zoeUITests;
 			packageProductDependencies = (
@@ -199,7 +199,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4F973E892F58B0DD0054D9E3 /* Build configuration list for PBXProject "zoe" */;
+			buildConfigurationList = 4F973E892F58B0DD0054D9E3 /* Build configuration list for PBXProject "Zoe" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -290,7 +290,7 @@
 				CODE_SIGN_ENTITLEMENTS = Zoe/zoe.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = CPGZ4KHYHS;
+				DEVELOPMENT_TEAM = KLKLGYZVPW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Zoe/Info.plist;
@@ -325,7 +325,7 @@
 				CODE_SIGN_ENTITLEMENTS = Zoe/zoe.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = CPGZ4KHYHS;
+				DEVELOPMENT_TEAM = KLKLGYZVPW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Zoe/Info.plist;
@@ -479,7 +479,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = CPGZ4KHYHS;
+				DEVELOPMENT_TEAM = KLKLGYZVPW;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
@@ -501,7 +501,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = CPGZ4KHYHS;
+				DEVELOPMENT_TEAM = KLKLGYZVPW;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
@@ -522,7 +522,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = CPGZ4KHYHS;
+				DEVELOPMENT_TEAM = KLKLGYZVPW;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codelabs.zoeUITests;
@@ -542,7 +542,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = CPGZ4KHYHS;
+				DEVELOPMENT_TEAM = KLKLGYZVPW;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.codelabs.zoeUITests;
@@ -560,7 +560,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4F973E892F58B0DD0054D9E3 /* Build configuration list for PBXProject "zoe" */ = {
+		4F973E892F58B0DD0054D9E3 /* Build configuration list for PBXProject "Zoe" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4F973EB52F58B0E00054D9E3 /* Debug */,
