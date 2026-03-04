@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C2PA10062F58B0DD0054D9E3 /* C2PA in Frameworks */ = {isa = PBXBuildFile; productRef = C2PA10052F58B0DD0054D9E3 /* C2PA */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		4F973EA02F58B0DF0054D9E3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -65,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C2PA10062F58B0DD0054D9E3 /* C2PA in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +130,7 @@
 			);
 			name = zoe;
 			packageProductDependencies = (
+				C2PA10052F58B0DD0054D9E3 /* C2PA */,
 			);
 			productName = zoe;
 			productReference = 4F973E8E2F58B0DD0054D9E3 /* zoe.app */;
@@ -208,6 +214,9 @@
 			);
 			mainGroup = 4F973E852F58B0DD0054D9E3;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C2PA10042F58B0DD0054D9E3 /* XCRemoteSwiftPackageReference "c2pa-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4F973E8F2F58B0DD0054D9E3 /* Products */;
 			projectDirPath = "";
@@ -597,6 +606,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C2PA10042F58B0DD0054D9E3 /* XCRemoteSwiftPackageReference "c2pa-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/contentauth/c2pa-ios.git";
+			requirement = {
+				kind = exactVersion;
+				version = "0.0.8";
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C2PA10052F58B0DD0054D9E3 /* C2PA */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C2PA10042F58B0DD0054D9E3 /* XCRemoteSwiftPackageReference "c2pa-ios" */;
+			productName = C2PA;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4F973E862F58B0DD0054D9E3 /* Project object */;
 }
