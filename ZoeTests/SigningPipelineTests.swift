@@ -61,7 +61,136 @@ final class SigningPipelineTests {
         #expect(parsed["format"] as? String == "image/jpeg")
     }
 
-    // MARK: - Task 6.3: Full embed/extract round-trip with software signer
+    // MARK: - Task 6.3: Secure Enclave sign + full embed/extract round-trip (physical device only)
+
+    /// Validates the full Phase 0 spike on a real device:
+    ///   1. Generate an ephemeral SE key (skips gracefully on Simulator where SE is unavailable)
+    ///   2. Derive kid from the SE public key
+    ///   3. Build a zoe.media.v1 manifest with that kid
+    ///   4. Sign canonical manifest JSON with SE key via CryptoKit
+    ///   5. Verify SE signature against the SE public key
+    ///   6. Embed manifest (with software C2PA signer) and extract → round-trip check
+    @Test("Full spike on device: SE key generation, kid derivation, canonical sign, embed/extract")
+    func testFullSpikeOnDevice() async throws {
+        // --- Step 1: Attempt SE key generation (Simulator: SecKeyCreateRandomKey returns nil) ---
+        let access = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            .privateKeyUsage,
+            nil
+        )!
+        let keyAttributes: [String: Any] = [
+            kSecAttrKeyType as String:      kSecAttrKeyTypeECSECPrimeRandom,
+            kSecAttrKeySizeInBits as String: 256,
+            kSecAttrTokenID as String:      kSecAttrTokenIDSecureEnclave,
+            kSecPrivateKeyAttrs as String: [
+                kSecAttrIsPermanent as String:    false, // ephemeral — not stored in Keychain
+                kSecAttrAccessControl as String:  access
+            ]
+        ]
+        var cfError: Unmanaged<CFError>?
+        guard let sePrivateKey = SecKeyCreateRandomKey(keyAttributes as CFDictionary, &cfError) else {
+            // Simulator: SE unavailable — skip gracefully
+            print("[testFullSpikeOnDevice] SE unavailable (Simulator?) — skipping: \(cfError!.takeRetainedValue())")
+            return
+        }
+        guard let sePublicKey = SecKeyCopyPublicKey(sePrivateKey) else {
+            Issue.record("Could not copy SE public key")
+            return
+        }
+
+        // --- Step 2: Derive kid ---
+        var copyErr: Unmanaged<CFError>?
+        guard
+            let pubKeyData = SecKeyCopyExternalRepresentation(sePublicKey, &copyErr) as Data?,
+            // SecKeyCopyExternalRepresentation for EC returns the x963 uncompressed point (04||X||Y).
+            // For kid derivation we need the DER SubjectPublicKeyInfo form.
+            // Construct DER SPKI for P-256: fixed 26-byte header + 65-byte point = 91 bytes.
+            pubKeyData.count == 65
+        else {
+            Issue.record("Unexpected SE public key representation: \(copyErr?.takeRetainedValue().localizedDescription ?? "nil")")
+            return
+        }
+        // ASN.1 DER SubjectPublicKeyInfo header for P-256 (id-ecPublicKey + prime256v1)
+        let spkiHeader = Data([
+            0x30, 0x59,             // SEQUENCE (89 bytes)
+            0x30, 0x13,             // SEQUENCE (19 bytes) — AlgorithmIdentifier
+            0x06, 0x07,             // OID (7 bytes) id-ecPublicKey
+            0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
+            0x06, 0x08,             // OID (8 bytes) prime256v1
+            0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07,
+            0x03, 0x42, 0x00        // BIT STRING (66 bytes, 0 unused bits)
+        ])
+        let derPublicKey = spkiHeader + pubKeyData
+        let kid = SHA256.hash(data: derPublicKey)
+            .compactMap { String(format: "%02x", $0) }.joined()
+        #expect(kid.count == 64)
+
+        // --- Step 3: Build manifest ---
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+        let jpegData = renderer.jpegData(withCompressionQuality: 0.5) { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+        }
+        let contentHash = SHA256.hash(data: jpegData)
+            .compactMap { String(format: "%02x", $0) }.joined()
+
+        let manifest = C2PAManifest(
+            schemaVersion: "zoe.media.v1",
+            kid: kid,
+            contentHash: contentHash,
+            assetId: UUID().uuidString,
+            captureTimestamp: ISO8601DateFormatter().string(from: Date()),
+            appVersion: "test",
+            iosVersion: UIDevice.current.systemVersion,
+            deviceModel: deviceModelString()
+        )
+
+        // --- Step 4: Sign canonical manifest JSON with SE key ---
+        let canonicalData = try manifest.canonicalJSON()
+        guard SecKeyIsAlgorithmSupported(sePrivateKey, .sign, .ecdsaSignatureMessageX962SHA256) else {
+            Issue.record("SE key does not support ECDSA P-256 signing")
+            return
+        }
+        var signErr: Unmanaged<CFError>?
+        guard let seSignature = SecKeyCreateSignature(
+            sePrivateKey,
+            .ecdsaSignatureMessageX962SHA256,
+            canonicalData as CFData,
+            &signErr
+        ) as Data? else {
+            Issue.record("SE signing failed: \(signErr!.takeRetainedValue())")
+            return
+        }
+
+        // --- Step 5: Verify SE signature ---
+        var verifyErr: Unmanaged<CFError>?
+        let verified = SecKeyVerifySignature(
+            sePublicKey,
+            .ecdsaSignatureMessageX962SHA256,
+            canonicalData as CFData,
+            seSignature as CFData,
+            &verifyErr
+        )
+        #expect(verified, "SE signature must verify against SE public key")
+
+        // --- Step 6: C2PA embed/extract round-trip (software signer wraps the assertion) ---
+        let signer = try Signer(
+            certsPEM: C2PATestCredentials.certsPEM,
+            privateKeyPEM: C2PATestCredentials.privateKeyPEM,
+            algorithm: .es256,
+            tsaURL: nil
+        )
+        let embeddedJPEG = try C2PAEmbedder.embed(manifest: manifest, signer: signer, into: jpegData)
+        #expect(embeddedJPEG.count > jpegData.count)
+
+        let extractedJSON = try C2PAEmbedder.extract(from: embeddedJPEG)
+        #expect(!extractedJSON.isEmpty)
+        let parsed = try JSONSerialization.jsonObject(with: Data(extractedJSON.utf8)) as! [String: Any]
+        #expect(parsed["manifests"] != nil)
+    }
+
+    // MARK: - Task 6.3 (continued): Full embed/extract round-trip with software signer
 
     @Test("Full spike: embed C2PA manifest with software signer, extract, verify JSON")
     func testFullSpikeWithSoftwareSigner() async throws {
