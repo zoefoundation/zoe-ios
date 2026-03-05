@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C2PA10062F58B0DD0054D9E3 /* C2PA in Frameworks */ = {isa = PBXBuildFile; productRef = C2PA10052F58B0DD0054D9E3 /* C2PA */; };
+		BB001A012F58B0DD0054D9E3 /* isrg_root_x1.der in Resources */ = {isa = PBXBuildFile; fileRef = BB001A002F58B0DD0054D9E3 /* isrg_root_x1.der */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,6 +32,7 @@
 		4F973E8E2F58B0DD0054D9E3 /* zoe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = zoe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4F973E9F2F58B0DF0054D9E3 /* zoeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = zoeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4F973EA92F58B0E00054D9E3 /* zoeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = zoeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB001A002F58B0DD0054D9E3 /* isrg_root_x1.der */ = {isa = PBXFileReference; lastKnownFileType = file; name = isrg_root_x1.der; path = Zoe/Networking/PinnedCertificates/isrg_root_x1.der; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -241,6 +243,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB001A012F58B0DD0054D9E3 /* isrg_root_x1.der in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
