@@ -181,10 +181,14 @@ final class SigningPipelineTests {
             algorithm: .es256,
             tsaURL: nil
         )
-        let embeddedJPEG = try C2PAEmbedder.embed(manifest: manifest, signer: signer, into: jpegData)
+        let embeddedJPEG = try await Task.detached(priority: .userInitiated) {
+            try C2PAEmbedder.embed(manifest: manifest, signer: signer, into: jpegData)
+        }.value
         #expect(embeddedJPEG.count > jpegData.count)
 
-        let extractedJSON = try C2PAEmbedder.extract(from: embeddedJPEG)
+        let extractedJSON = try await Task.detached(priority: .userInitiated) {
+            try C2PAEmbedder.extract(from: embeddedJPEG)
+        }.value
         #expect(!extractedJSON.isEmpty)
         let parsed = try JSONSerialization.jsonObject(with: Data(extractedJSON.utf8)) as! [String: Any]
         #expect(parsed["manifests"] != nil)
@@ -221,10 +225,14 @@ final class SigningPipelineTests {
             deviceModel: deviceModelString()
         )
 
-        let embeddedJPEG = try C2PAEmbedder.embed(manifest: manifest, signer: signer, into: jpegData)
+        let embeddedJPEG = try await Task.detached(priority: .userInitiated) {
+            try C2PAEmbedder.embed(manifest: manifest, signer: signer, into: jpegData)
+        }.value
         #expect(embeddedJPEG.count > jpegData.count)
 
-        let extractedJSON = try C2PAEmbedder.extract(from: embeddedJPEG)
+        let extractedJSON = try await Task.detached(priority: .userInitiated) {
+            try C2PAEmbedder.extract(from: embeddedJPEG)
+        }.value
         #expect(!extractedJSON.isEmpty)
         let parsedResult = try JSONSerialization.jsonObject(with: Data(extractedJSON.utf8)) as! [String: Any]
         #expect(parsedResult["manifests"] != nil)

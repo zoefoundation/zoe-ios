@@ -20,12 +20,12 @@ actor SigningPipeline {
         let contentHash = SHA256.hash(data: jpegData)
             .compactMap { String(format: "%02x", $0) }.joined()
 
-        let iosVersion = await UIDevice.current.systemVersion
-        let appVersion = await (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+        let iosVersion = UIDevice.current.systemVersion
+        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
 
         let kid = signingKey.map { deriveKid(from: $0.publicKey) } ?? "spike-test-key"
 
-        let manifest = await C2PAManifest(
+        let manifest = C2PAManifest(
             schemaVersion: "zoe.media.v1",
             kid: kid,
             contentHash: contentHash,
