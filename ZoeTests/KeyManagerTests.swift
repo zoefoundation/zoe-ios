@@ -27,7 +27,7 @@ final class MockNetworking: KeyManagerNetworking, @unchecked Sendable {
     var registerResults: [Result<RegisterResponse, Error>] = [
         .success(RegisterResponse(status: "registered"))
     ]
-    private var registerCallCount = 0
+    private(set) var registerCallCount = 0
 
     func challenge(kid: String?) async throws -> ChallengeResponse {
         try challengeResult.get()
@@ -67,7 +67,6 @@ private func makeKeyManager(
 
 @Suite("KeyManagerTests")
 struct KeyManagerTests {
-
     // Test 1: initial state is .unknown before initialise()
     @Test("State is .unknown before initialise")
     func testInitialStateIsUnknown() async {
@@ -103,6 +102,7 @@ struct KeyManagerTests {
         await km.initialise()
         let state = await MainActor.run { km.state }
         #expect(state == .registered)
+        #expect(networking.registerCallCount == 2)
     }
 
     // Test 4: attest_invalid → .failedPermanent
@@ -195,5 +195,18 @@ struct KeyManagerTests {
         let state = await MainActor.run { km.state }
         #expect(state == .failedPermanent)
     }
-}
 
+    @Test("challenge_expired followed by definitive failure does not retry transiently")
+    func testChallengeExpiredThenDefinitiveFailure() async {
+        let networking = MockNetworking()
+        networking.registerResults = [
+            .failure(APIError.definitiveFailure(code: "challenge_expired")),
+            .failure(APIError.definitiveFailure(code: "attest_invalid"))
+        ]
+        let km = await MainActor.run { makeKeyManager(networking: networking) }
+        await km.initialise()
+        let state = await MainActor.run { km.state }
+        #expect(state == .failedPermanent)
+        #expect(networking.registerCallCount == 2)
+    }
+}

@@ -330,7 +330,13 @@ final class KeyManager: ObservableObject {
             logger.info("KeyManager: challenge_expired retry success → .registered")
             state = .registered
             saveRegistrationState(.registered)
-        default:
+        case .definitiveFailure(let code):
+            logger.error("KeyManager: definitive failure after challenge_expired (\(code)) → .failedPermanent")
+            state = .failedPermanent
+            saveRegistrationState(.failedPermanent)
+        case .challengeExpired, .transientFailure:
+            await handleTransientFailure(keyPair: keyPair, attemptNumber: attemptNumber)
+        case .revocationCheckPassed, .revoked:
             await handleTransientFailure(keyPair: keyPair, attemptNumber: attemptNumber)
         }
     }
