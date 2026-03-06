@@ -74,12 +74,16 @@ final class APIClient: Sendable {
 
     // MARK: - challenge()
 
-    func challenge() async throws -> ChallengeResponse {
+    func challenge(kid: String? = nil) async throws -> ChallengeResponse {
         var request = URLRequest(url: APIEndpoints.url(for: APIEndpoints.challengePath))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = Data("{}".utf8)
-
+        if let kid = kid {
+            struct ChallengeBody: Encodable { let kid: String }
+            request.httpBody = try makeJSONEncoder().encode(ChallengeBody(kid: kid))
+        } else {
+            request.httpBody = Data("{}".utf8)
+        }
         let (data, response) = try await performRequest(request)
         return try decode(ChallengeResponse.self, from: data, response: response)
     }

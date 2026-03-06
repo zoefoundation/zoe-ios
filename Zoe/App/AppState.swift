@@ -4,5 +4,9 @@ import Combine
 final class AppState: ObservableObject {
     let keyManager = KeyManager()
 
-    init() {}
+    init() {
+        Task {
+            await keyManager.initialise()
+        }
+    }
 }

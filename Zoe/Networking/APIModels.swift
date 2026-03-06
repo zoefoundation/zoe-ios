@@ -2,12 +2,14 @@ import Foundation
 
 // MARK: - Response Types
 
-struct ChallengeResponse: Codable {
-    let challenge: String
-    let expiresAt: String
+struct ChallengeResponse: Sendable {
+    nonisolated let challenge: String
+    nonisolated let expiresAt: String
 }
 
-struct RegisterRequest: Codable {
+nonisolated extension ChallengeResponse: Codable {}
+
+struct RegisterRequest: Sendable {
     let kid: String
     let publicKeyPem: String
     let attestationObject: String
@@ -18,9 +20,13 @@ struct RegisterRequest: Codable {
     let challenge: String
 }
 
-struct RegisterResponse: Codable {
+nonisolated extension RegisterRequest: Codable {}
+
+struct RegisterResponse: Sendable {
     let status: String
 }
+
+nonisolated extension RegisterResponse: Codable {}
 
 // MARK: - Error Envelope
 
