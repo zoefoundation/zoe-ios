@@ -107,12 +107,30 @@ final class APIClient: Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            throw APIError.networkError(error)
+            throw Self.classifyTransportError(error)
         }
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.unexpectedResponse(statusCode: -1)
         }
         return (data, httpResponse)
+    }
+
+    nonisolated static func classifyTransportError(_ error: Error) -> APIError {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .secureConnectionFailed,
+                 .serverCertificateHasBadDate,
+                 .serverCertificateUntrusted,
+                 .serverCertificateHasUnknownRoot,
+                 .serverCertificateNotYetValid,
+                 .clientCertificateRejected,
+                 .clientCertificateRequired:
+                return .pinningFailed
+            default:
+                return .networkError(urlError)
+            }
+        }
+        return .networkError(error)
     }
 
     private func decode<T: Decodable>(_ type: T.Type, from data: Data, response: HTTPURLResponse) throws -> T {

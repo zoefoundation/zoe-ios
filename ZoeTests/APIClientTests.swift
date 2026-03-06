@@ -19,10 +19,10 @@ final class APIClientTests {
     @Test("Pinning: mismatched certificate data is rejected")
     func testPinningRejectsMismatchedCert() throws {
         let pinnedData = try loadBundledCert()
+        let cert = try #require(SecCertificateCreateWithData(nil, pinnedData as CFData))
         let wrongData = Data(repeating: 0xAB, count: pinnedData.count)
         let delegate = CertificatePinningDelegate(pinnedCertificateData: pinnedData)
-        // Empty chain (no cert matches gibberish)
-        #expect(!delegate.matchesPinnedCertificate(chain: [], pinnedData: wrongData))
+        #expect(!delegate.matchesPinnedCertificate(chain: [cert], pinnedData: wrongData))
     }
 
     // MARK: - 7.4 APIError: transient classification
@@ -34,6 +34,14 @@ final class APIClientTests {
         #expect(!APIError.definitiveFailure(code: "attest_invalid").isTransient)
         #expect(!APIError.definitiveFailure(code: "device_revoked").isTransient)
         #expect(!APIError.pinningFailed.isTransient)
+    }
+
+    @Test("Transport error mapping: certificate failures map to pinningFailed")
+    func testTransportErrorMappingForTLSFailure() {
+        let mapped = APIClient.classifyTransportError(URLError(.secureConnectionFailed))
+        if case .pinningFailed = mapped {} else {
+            Issue.record("Expected .pinningFailed, got \(mapped)")
+        }
     }
 
     // MARK: - 7.5 ChallengeResponse: decodes snake_case from JSON
