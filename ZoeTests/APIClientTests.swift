@@ -44,6 +44,13 @@ final class APIClientTests {
         }
     }
 
+    @Test("Endpoint URL uses injected base URL")
+    func testEndpointURLUsesInjectedBaseURL() throws {
+        let baseURL = try #require(URL(string: "https://staging.zoe.media"))
+        let url = APIClient.makeEndpointURL(baseURL: baseURL, path: "/v1/challenge")
+        #expect(url.absoluteString == "https://staging.zoe.media/v1/challenge")
+    }
+
     // MARK: - 7.5 ChallengeResponse: decodes snake_case from JSON
 
     @Test("ChallengeResponse: decodes snake_case from JSON")

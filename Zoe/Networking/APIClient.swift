@@ -75,7 +75,7 @@ final class APIClient: Sendable {
     // MARK: - challenge()
 
     func challenge(kid: String? = nil) async throws -> ChallengeResponse {
-        var request = URLRequest(url: APIEndpoints.url(for: APIEndpoints.challengePath))
+        var request = URLRequest(url: endpointURL(for: APIEndpoints.challengePath))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let kid = kid {
@@ -91,7 +91,7 @@ final class APIClient: Sendable {
     // MARK: - registerKey(_:)
 
     func registerKey(_ registerRequest: RegisterRequest) async throws -> RegisterResponse {
-        var request = URLRequest(url: APIEndpoints.url(for: APIEndpoints.registerPath))
+        var request = URLRequest(url: endpointURL(for: APIEndpoints.registerPath))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try makeJSONEncoder().encode(registerRequest)
@@ -131,6 +131,15 @@ final class APIClient: Sendable {
             }
         }
         return .networkError(error)
+    }
+
+    func endpointURL(for path: String) -> URL {
+        Self.makeEndpointURL(baseURL: baseURL, path: path)
+    }
+
+    nonisolated static func makeEndpointURL(baseURL: URL, path: String) -> URL {
+        let normalizedPath = path.hasPrefix("/") ? String(path.dropFirst()) : path
+        return baseURL.appendingPathComponent(normalizedPath)
     }
 
     private func decode<T: Decodable>(_ type: T.Type, from data: Data, response: HTTPURLResponse) throws -> T {
