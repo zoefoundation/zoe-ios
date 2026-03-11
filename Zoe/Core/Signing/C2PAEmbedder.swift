@@ -34,6 +34,27 @@ struct C2PAEmbedder: Sendable {
         return try Data(contentsOf: dstURL)
     }
 
+    /// Embed a C2PA manifest into a media file using file-URL streams.
+    /// Returns the URL of the signed output temp file. Caller is responsible for cleanup.
+    nonisolated static func embedFile(
+        manifest: C2PAManifest,
+        signer: Signer,
+        at sourceURL: URL,
+        format: String
+    ) throws -> URL {
+        let manifestJSON = try manifest.c2paManifestJSON()
+        let builder = try Builder(manifestJSON: manifestJSON)
+
+        let ext = sourceURL.pathExtension.isEmpty ? "tmp" : sourceURL.pathExtension
+        let dstURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString).\(ext)")
+
+        let srcStream = try Stream(readFrom: sourceURL)
+        let dstStream = try Stream(writeTo: dstURL)
+        _ = try builder.sign(format: format, source: srcStream, destination: dstStream, signer: signer)
+        return dstURL
+    }
+
     // MARK: - Extract
 
     /// Extract the C2PA manifest JSON from a signed JPEG.

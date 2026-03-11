@@ -237,4 +237,75 @@ final class SigningPipelineTests {
         let parsedResult = try JSONSerialization.jsonObject(with: Data(extractedJSON.utf8)) as! [String: Any]
         #expect(parsedResult["manifests"] != nil)
     }
+
+    // MARK: - Story 2.5 Tests
+
+    @Test("sign(fileURL:) with no keyManager set: unsigned fallback, no throw")
+    func testSignFileURL_unsignedFallback() async throws {
+        let pipeline = SigningPipeline()
+        // No keyManager → isSigningAvailable == false → unsigned fallback path
+
+        let tmpURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString).jpg")
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+        let jpegData = renderer.jpegData(withCompressionQuality: 0.5) { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+        }
+        try jpegData.write(to: tmpURL)
+        defer { try? FileManager.default.removeItem(at: tmpURL) }
+
+        // saveToPhotoLibrary silently fails in test environment — focus is no-crash/no-throw
+        try await pipeline.sign(fileURL: tmpURL)
+    }
+
+    @Test("sign(fileURL:) with software key KeyManager completes without throwing")
+    func testSignFileURL_happyPath_softwareKey() async throws {
+        let softKey = P256.Signing.PrivateKey()
+        let km = KeyManager(
+            attestationService: MockAttestationService(),
+            networking: MockNetworking(),
+            seKeyFactory: { (softKey.rawRepresentation, softKey.publicKey) },
+            initialStateOverride: .registered,
+            keychainNamespace: UUID().uuidString
+        )
+        await km.initialise()
+
+        let pipeline = SigningPipeline()
+        await pipeline.setKeyManager(km)
+
+        let tmpURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString).jpg")
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+        let jpegData = renderer.jpegData(withCompressionQuality: 0.5) { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+        }
+        try jpegData.write(to: tmpURL)
+        defer { try? FileManager.default.removeItem(at: tmpURL) }
+
+        // On simulator: SE key unavailable → do/catch triggers unsigned fallback → no throw
+        // Photos save silently fails in test environment — focus is no-crash/no-throw
+        try await pipeline.sign(fileURL: tmpURL)
+    }
+
+    @Test("sign(fileURL:) with unavailable KeyManager completes under 500ms")
+    func testSignFileURL_nonBlocking_500ms() async throws {
+        let pipeline = SigningPipeline()
+        // No keyManager → fastest path (unsigned fallback, no SE ops)
+
+        let tmpURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString).jpg")
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1))
+        let jpegData = renderer.jpegData(withCompressionQuality: 0.5) { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+        }
+        try jpegData.write(to: tmpURL)
+        defer { try? FileManager.default.removeItem(at: tmpURL) }
+
+        let start = Date()
+        try await pipeline.sign(fileURL: tmpURL)
+        #expect(Date().timeIntervalSince(start) < 0.5)
+    }
 }

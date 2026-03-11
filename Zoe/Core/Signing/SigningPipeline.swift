@@ -1,10 +1,17 @@
 import Foundation
 import C2PA
 import CryptoKit
+import Photos
 import UIKit
 
 /// Orchestrates the full signing pipeline: manifest construction → C2PA embedding via c2pa-ios.
 actor SigningPipeline {
+
+    private weak var keyManager: KeyManager?
+
+    func setKeyManager(_ km: KeyManager) {
+        self.keyManager = km
+    }
 
     /// Sign and embed a provenance manifest into JPEG data.
     ///
@@ -40,9 +47,87 @@ actor SigningPipeline {
     }
 
     /// Called by CaptureViewModel after each photo or video capture.
-    /// Story 2.5 implements: SHA-256 hash → C2PA manifest → SE sign → C2PAEmbedder → Photo Library save.
+    /// Hashes the file, builds a `zoe.media.v1` C2PA manifest, signs via SE, embeds, and saves to Photos.
+    /// All errors are silently absorbed — the unsigned original is saved as a fallback (NFR13).
+    ///
     /// - Parameter fileURL: URL of the encoded media file in the temp directory.
     func sign(fileURL: URL) async throws {
-        // TODO (Story 2.5): hash → manifest → SE sign → C2PAEmbedder → save to photo library
+        // Snapshot @MainActor state in one hop (KeyManager is @MainActor)
+        let (isAvailable, kid, km) = await MainActor.run { [keyManager] in
+            (keyManager?.isSigningAvailable == true, keyManager?.kid, keyManager)
+        }
+
+        // UNSIGNED FALLBACK: signing unavailable — save original to Photos and return
+        guard isAvailable, let kid, let km else {
+            await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
+            try? FileManager.default.removeItem(at: fileURL)
+            return
+        }
+
+        do {
+            // 1. Read file bytes for hashing
+            let fileData = try Data(contentsOf: fileURL)
+
+            // 2. Compute SHA-256 content hash
+            let contentHash = SHA256.hash(data: fileData)
+                .compactMap { String(format: "%02x", $0) }.joined()
+
+            // 3. Gather manifest field values
+            let iosVersion = await UIDevice.current.systemVersion
+            let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+
+            // 4. Build C2PAManifest (all zoe.media.v1 fields — per spec-freeze.md)
+            let manifest = C2PAManifest(
+                schemaVersion: "zoe.media.v1",
+                kid: kid,
+                contentHash: contentHash,
+                assetId: UUID().uuidString,
+                captureTimestamp: ISO8601DateFormatter().string(from: Date()),
+                appVersion: appVersion,
+                iosVersion: iosVersion,
+                deviceModel: deviceModelString()
+            )
+
+            // 5. Construct SE-backed c2pa-ios Signer via KeyManager
+            let signer = try await km.makeC2PASigner(certsPEM: ZoeSigningCredentials.certsPEM)
+
+            // 6. Determine MIME format from file extension
+            let format = fileURL.c2paFormat
+
+            // 7. Embed manifest into file (uses file-URL streams — memory-efficient for video)
+            let signedURL = try C2PAEmbedder.embedFile(
+                manifest: manifest,
+                signer: signer,
+                at: fileURL,
+                format: format
+            )
+
+            // 8. Save signed file to Photos library, clean up both temp files
+            await saveToPhotoLibrary(url: signedURL, isVideo: fileURL.isVideoFile)
+            try? FileManager.default.removeItem(at: signedURL)
+            try? FileManager.default.removeItem(at: fileURL)
+
+        } catch {
+            // SILENT ERROR ABSORPTION: signing failed — save unsigned original (NFR13)
+            await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+    }
+
+    private func saveToPhotoLibrary(url: URL, isVideo: Bool) async {
+        // Use current status only — permission must be requested from a UI context (CaptureViewModel.configure)
+        // to avoid blocking background/test contexts with a system dialog.
+        let authStatus = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        guard authStatus == .authorized || authStatus == .limited else { return }
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                let req = PHAssetCreationRequest.forAsset()
+                let type: PHAssetResourceType = isVideo ? .video : .photo
+                req.addResource(with: type, fileURL: url, options: nil)
+            }
+        } catch {
+            // Photos save failed — silently absorb (capture is already complete, NFR13)
+        }
     }
 }
+

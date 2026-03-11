@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import Combine
 import OSLog
+import Photos
 
 @MainActor
 final class CaptureViewModel: NSObject, ObservableObject {
@@ -35,9 +36,13 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     func configure(keyManager: KeyManager? = nil) async {
         if let km = keyManager { self.keyManager = km }
+        if let km = keyManager {
+            await signingPipeline.setKeyManager(km)
+        }
 
         let videoGranted = await AVCaptureDevice.requestAccess(for: .video)
         _ = await AVCaptureDevice.requestAccess(for: .audio)
+        _ = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
 
         permissionStatus = AVCaptureDevice.authorizationStatus(for: .video)
         guard videoGranted else { return }
