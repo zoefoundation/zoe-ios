@@ -87,7 +87,7 @@ final class KeyManager: ObservableObject {
         // c) If .failedPermanent: set state, return
         if persisted == .failedPermanent {
             state = .failedPermanent
-            logger.info("KeyManager: loaded .failedPermanent from Keychain — skipping registration")
+            logger.info("KeyManager: loaded .failedPermanent — skipping registration")
             return
         }
 
@@ -199,38 +199,50 @@ final class KeyManager: ObservableObject {
             ]
             SecItemDelete(query as CFDictionary)
         }
+        // Also clear the UserDefaults-backed failedPermanent flag
+        UserDefaults.standard.removeObject(forKey: udFailedPermanentKey)
     }
 
+    // MARK: - State persistence keys
+    // .registered   → Keychain (cryptographic identity, must survive app re-launch)
+    // .failedPermanent → UserDefaults (soft policy flag; wiped on app delete, resettable)
+
+    private var udFailedPermanentKey: String { keychainService + ".failedPermanent" }
+
     private func saveRegistrationState(_ regState: RegistrationState) {
-        let stateString: String
         switch regState {
-        case .registered: stateString = "registered"
-        case .failedPermanent: stateString = "failedPermanent"
-        default: stateString = "unknown"
-        }
-        guard let stateData = stateString.data(using: .utf8) else { return }
-
-        let updateQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: keychainStateKey
-        ]
-        let updateAttribs: [String: Any] = [kSecValueData as String: stateData]
-        let updateStatus = SecItemUpdate(updateQuery as CFDictionary, updateAttribs as CFDictionary)
-
-        if updateStatus == errSecItemNotFound {
-            let addQuery: [String: Any] = [
+        case .registered:
+            // Persist to Keychain
+            guard let data = "registered".data(using: .utf8) else { return }
+            let updateQuery: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: keychainService,
-                kSecAttrAccount as String: keychainStateKey,
-                kSecValueData as String: stateData,
-                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+                kSecAttrAccount as String: keychainStateKey
             ]
-            SecItemAdd(addQuery as CFDictionary, nil)
+            if SecItemUpdate(updateQuery as CFDictionary, [kSecValueData as String: data] as CFDictionary) == errSecItemNotFound {
+                let addQuery: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: keychainService,
+                    kSecAttrAccount as String: keychainStateKey,
+                    kSecValueData as String: data,
+                    kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+                ]
+                SecItemAdd(addQuery as CFDictionary, nil)
+            }
+        case .failedPermanent:
+            // Persist to UserDefaults — clearable without needing app reinstall
+            UserDefaults.standard.set(true, forKey: udFailedPermanentKey)
+        default:
+            break
         }
     }
 
     private func loadPersistedState() -> RegistrationState {
+        // Check UserDefaults for failedPermanent first (fast path, clears on app delete)
+        if UserDefaults.standard.bool(forKey: udFailedPermanentKey) {
+            return .failedPermanent
+        }
+        // Check Keychain for registered state
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
@@ -242,14 +254,11 @@ final class KeyManager: ObservableObject {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess,
               let data = result as? Data,
-              let string = String(data: data, encoding: .utf8) else {
+              let string = String(data: data, encoding: .utf8),
+              string == "registered" else {
             return .unknown
         }
-        switch string {
-        case "registered": return .registered
-        case "failedPermanent": return .failedPermanent
-        default: return .unknown
-        }
+        return .registered
     }
 
     // MARK: - Registration Flow
