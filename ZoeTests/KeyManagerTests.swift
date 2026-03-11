@@ -209,4 +209,149 @@ struct KeyManagerTests {
         #expect(state == .failedPermanent)
         #expect(networking.registerCallCount == 2)
     }
+
+    // MARK: - B2: lastError tests
+
+    @Test("lastError is set on definitive failure")
+    func testLastErrorSetOnDefinitiveFailure() async {
+        let networking = MockNetworking()
+        networking.registerResults = [
+            .failure(APIError.definitiveFailure(code: "attest_invalid"))
+        ]
+        let km = await MainActor.run { makeKeyManager(networking: networking) }
+        await km.initialise()
+        let lastError = await MainActor.run { km.lastError }
+        #expect(lastError == "attest_invalid")
+    }
+
+    @Test("lastError is set on device_unauthorized")
+    func testLastErrorSetOnDeviceUnauthorized() async {
+        let networking = MockNetworking()
+        networking.registerResults = [
+            .failure(APIError.definitiveFailure(code: "device_unauthorized"))
+        ]
+        let km = await MainActor.run { makeKeyManager(networking: networking) }
+        await km.initialise()
+        let lastError = await MainActor.run { km.lastError }
+        #expect(lastError == "device_unauthorized")
+    }
+
+    @Test("lastError is nil after successful registration")
+    func testLastErrorNilOnSuccess() async {
+        let km = await MainActor.run { makeKeyManager() }
+        await km.initialise()
+        let lastError = await MainActor.run { km.lastError }
+        #expect(lastError == nil)
+    }
+
+    @Test("resetRegistration clears state and re-registers successfully")
+    func testResetRegistrationRecovery() async {
+        // Start with a failed state
+        let networking = MockNetworking()
+        networking.registerResults = [
+            .failure(APIError.definitiveFailure(code: "attest_invalid")),
+            .success(RegisterResponse(status: "registered"))
+        ]
+        let km = await MainActor.run { makeKeyManager(networking: networking) }
+        await km.initialise()
+
+        // Verify failed state
+        let failedState = await MainActor.run { km.state }
+        #expect(failedState == .failedPermanent)
+        #expect(await MainActor.run { km.lastError } == "attest_invalid")
+
+        // Reset and re-register
+        await km.resetRegistration()
+
+        let (finalState, finalLastError, finalKid) = await MainActor.run {
+            (km.state, km.lastError, km.kid)
+        }
+        #expect(finalState == .registered)
+        #expect(finalLastError == nil)
+        #expect(finalKid?.count == 64)
+    }
+
+    @Test("resetRegistration clears registrationLog and starts fresh")
+    func testResetRegistrationClearsLog() async {
+        let networking = MockNetworking()
+        networking.registerResults = [
+            .failure(APIError.definitiveFailure(code: "attest_invalid")),
+            .success(RegisterResponse(status: "registered"))
+        ]
+        let km = await MainActor.run { makeKeyManager(networking: networking) }
+        await km.initialise()
+
+        let logCountAfterFirstRun = await MainActor.run { km.registrationLog.count }
+        #expect(logCountAfterFirstRun > 0)
+
+        await km.resetRegistration()
+
+        // After reset the log starts fresh — old "attest_invalid" entries gone
+        let hasOldError = await MainActor.run {
+            km.registrationLog.contains { $0.message.contains("attest_invalid") }
+        }
+        #expect(hasOldError == false)
+    }
+
+    // MARK: - B3b: Registration log tests
+
+    @Test("Happy path populates registrationLog with success entries")
+    func testHappyPathPopulatesLog() async {
+        let km = await MainActor.run { makeKeyManager() }
+        await km.initialise()
+
+        let checks = await MainActor.run {
+            let log = km.registrationLog
+            let stages = Set(log.map { $0.stage })
+            return (
+                isEmpty: log.isEmpty,
+                hasINIT: stages.contains(.INIT),
+                hasSTATE: stages.contains(.STATE),
+                hasKEY: stages.contains(.KEY),
+                hasCOMPLETE: stages.contains(.COMPLETE),
+                lastIsSuccess: log.last?.level == .success
+            )
+        }
+        #expect(!checks.isEmpty)
+        #expect(checks.hasINIT)
+        #expect(checks.hasSTATE)
+        #expect(checks.hasKEY)
+        #expect(checks.hasCOMPLETE)
+        #expect(checks.lastIsSuccess)
+    }
+
+    @Test("Definitive failure populates log with error entry")
+    func testDefinitiveFailurePopulatesLog() async {
+        let networking = MockNetworking()
+        networking.registerResults = [
+            .failure(APIError.definitiveFailure(code: "attest_invalid"))
+        ]
+        let km = await MainActor.run { makeKeyManager(networking: networking) }
+        await km.initialise()
+
+        let checks = await MainActor.run {
+            let log = km.registrationLog
+            return (
+                isEmpty: log.isEmpty,
+                hasError: log.contains { $0.level == .error },
+                hasCompleteError: log.first { $0.stage == .COMPLETE && $0.level == .error } != nil
+            )
+        }
+        #expect(!checks.isEmpty)
+        #expect(checks.hasError)
+        #expect(checks.hasCompleteError)
+    }
+
+    @Test("failedPermanent state load logs error entry")
+    func testFailedPermanentStateLogsError() async {
+        let km = await MainActor.run {
+            makeKeyManager(initialStateOverride: .failedPermanent)
+        }
+        await km.initialise()
+
+        let hasStateError = await MainActor.run {
+            km.registrationLog.contains { $0.stage == .STATE && $0.level == .error }
+        }
+        #expect(hasStateError)
+    }
 }

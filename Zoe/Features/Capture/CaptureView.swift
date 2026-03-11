@@ -5,6 +5,9 @@ import UIKit
 struct CaptureView: View {
     @StateObject private var viewModel = CaptureViewModel()
     @EnvironmentObject private var appState: AppState
+    #if DEBUG
+    @State private var showingDebugView = false
+    #endif
 
     var body: some View {
         Group {
@@ -16,6 +19,11 @@ struct CaptureView: View {
         }
         .task { await viewModel.configure(keyManager: appState.keyManager) }
         .onDisappear { viewModel.stopSession() }
+        #if DEBUG
+        .sheet(isPresented: $showingDebugView) {
+            RegistrationDebugView(keyManager: appState.keyManager)
+        }
+        #endif
     }
 
     // MARK: - Permission denied
@@ -103,6 +111,15 @@ struct CaptureView: View {
                     )
                     .onTapGesture { viewModel.capturePhoto() }
                     .onLongPressGesture(minimumDuration: 0.5) { viewModel.startRecording() }
+                    #if DEBUG
+                    .contextMenu {
+                        Button {
+                            showingDebugView = true
+                        } label: {
+                            Label("Registration Diagnostics", systemImage: "wifi.exclamationmark")
+                        }
+                    }
+                    #endif
             }
         }
     }

@@ -33,6 +33,8 @@ extension APIClient: KeyManagerNetworking {}
 final class KeyManager: ObservableObject {
     @Published var state: RegistrationState = .unknown
     @Published private(set) var kid: String?
+    @Published private(set) var lastError: String?
+    @Published private(set) var registrationLog: [RegistrationLogEntry] = []
 
     var isSigningAvailable: Bool { state == .registered }
 
@@ -75,7 +77,9 @@ final class KeyManager: ObservableObject {
         //    If the install sentinel is absent, purge any stale Keychain entries so a
         //    previous .failedPermanent can't block registration after reinstall.
         let installSentinelKey = keychainService + ".installed"
+        log(.INIT, "Starting registration sequence")
         if initialStateOverride == nil && UserDefaults.standard.string(forKey: installSentinelKey) == nil {
+            log(.INIT, "Fresh install detected — purging stale Keychain state", level: .warning)
             logger.info("KeyManager: fresh install detected — clearing stale Keychain state")
             purgeKeychainState()
             UserDefaults.standard.set("1", forKey: installSentinelKey)
@@ -83,9 +87,11 @@ final class KeyManager: ObservableObject {
 
         // b) Load persisted state
         let persisted = initialStateOverride ?? loadPersistedState()
+        log(.STATE, "Persisted state: \(persisted)")
 
         // c) If .failedPermanent: set state, return
         if persisted == .failedPermanent {
+            log(.STATE, "Loaded .failedPermanent — registration permanently blocked", level: .error)
             state = .failedPermanent
             logger.info("KeyManager: loaded .failedPermanent — skipping registration")
             return
@@ -94,8 +100,31 @@ final class KeyManager: ObservableObject {
         // d) Load or generate SE key
         let keyPair: (dataRep: Data, publicKey: P256.Signing.PublicKey)
         do {
+            let existingData: Data? = {
+                let q: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: keychainService,
+                    kSecAttrAccount as String: keychainKeyTag,
+                    kSecReturnData as String: true,
+                    kSecMatchLimit as String: kSecMatchLimitOne
+                ]
+                var r: AnyObject?
+                return SecItemCopyMatching(q as CFDictionary, &r) == errSecSuccess ? r as? Data : nil
+            }()
+            if existingData != nil {
+                log(.KEY, "Loading SE key from Keychain...")
+            } else {
+                log(.KEY, "No SE key found — generating new Secure Enclave keypair...")
+            }
             keyPair = try generateOrLoadSEKey()
+            let kidPrefix = deriveKid(from: keyPair.publicKey).prefix(12)
+            if existingData != nil {
+                log(.KEY, "SE key loaded — kid: \(kidPrefix)...", level: .success)
+            } else {
+                log(.KEY, "New SE keypair generated — kid: \(kidPrefix)...", level: .success)
+            }
         } catch {
+            log(.KEY, "SE key unavailable — hardware error → failedPermanent", level: .error)
             logger.error("KeyManager: SE key unavailable — transitioning to .failedPermanent")
             state = .failedPermanent
             saveRegistrationState(.failedPermanent)
@@ -109,12 +138,18 @@ final class KeyManager: ObservableObject {
         // e) If .registered: check revocation via challenge(kid:)
         if persisted == .registered {
             state = .registered
+            let kidPrefix = kid?.prefix(12) ?? "?"
+            log(.REVOC, "Already registered — checking revocation via /v1/challenge (kid: \(kidPrefix)...)")
             logger.info("KeyManager: .registered loaded from Keychain — checking revocation")
             let revocCheck = await Self.checkRevocation(networking: networking, kid: kid)
             if revocCheck == .revoked {
+                log(.REVOC, "Revocation check: device_revoked → failedPermanent", level: .error)
                 logger.error("KeyManager: device_revoked on revocation check → .failedPermanent")
+                lastError = "device_revoked"
                 state = .failedPermanent
                 saveRegistrationState(.failedPermanent)
+            } else {
+                log(.REVOC, "Revocation check passed — device remains active", level: .success)
             }
             // Other outcomes (pass or network error) → fail open, stay .registered
             return
@@ -122,6 +157,27 @@ final class KeyManager: ObservableObject {
 
         // f) Start registration flow
         await performRegistration(keyPair: keyPair, attemptNumber: 1)
+    }
+
+    /// Clears ALL persisted registration state and re-runs initialise() from scratch.
+    ///
+    /// What gets cleared:
+    /// - Keychain: SE key data representation handle
+    /// - Keychain: registered/failedPermanent state
+    /// - UserDefaults: failedPermanent flag + install sentinel
+    /// - In-memory: seKey, kid, lastError, registrationLog
+    ///
+    /// Result: a brand-new SE keypair is generated on next initialise() → new kid.
+    /// The previous SE private key remains permanently inaccessible in hardware.
+    public func resetRegistration() async {
+        purgeKeychainState()
+        UserDefaults.standard.removeObject(forKey: keychainService + ".installed")
+        state = .unknown
+        lastError = nil
+        kid = nil
+        seKey = nil
+        registrationLog = []
+        await initialise()
     }
 
     func sign(data: Data) async throws -> P256.Signing.ECDSASignature {
@@ -134,6 +190,22 @@ final class KeyManager: ObservableObject {
         }
         let sePrivKey = try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: kp.dataRep)
         return try sePrivKey.signature(for: data)
+    }
+
+    // MARK: - Logging Helper
+
+    private func log(
+        _ stage: RegistrationLogEntry.Stage,
+        _ message: String,
+        level: RegistrationLogEntry.Level = .info
+    ) {
+        let entry = RegistrationLogEntry(stage: stage, message: message, level: level)
+        registrationLog.append(entry)
+        switch level {
+        case .info, .success: logger.info("\(entry.formatted, privacy: .public)")
+        case .warning:        logger.warning("\(entry.formatted, privacy: .public)")
+        case .error:          logger.error("\(entry.formatted, privacy: .public)")
+        }
     }
 
     // MARK: - SE Key Helpers
@@ -265,14 +337,17 @@ final class KeyManager: ObservableObject {
 
     private func performRegistration(keyPair: (dataRep: Data, publicKey: P256.Signing.PublicKey), attemptNumber: Int) async {
         state = .registering
+        log(.REGISTER, "Sending registration — POST /v1/keys/register (attempt \(attemptNumber)/3)...")
         logger.info("KeyManager: → .registering (attempt \(attemptNumber))")
 
         guard attestationService.isSupported else {
+            log(.ATTEST, "App Attest not supported on this device → failedPermanent", level: .error)
             logger.error("KeyManager: App Attest not supported → .failedPermanent")
             state = .failedPermanent
             saveRegistrationState(.failedPermanent)
             return
         }
+        log(.ATTEST, "Checking App Attest availability...")
 
         let kid = deriveKid(from: keyPair.publicKey)
         let pem = exportPublicKeyAsPEM(keyPair.publicKey)
@@ -288,20 +363,26 @@ final class KeyManager: ObservableObject {
 
         switch outcome {
         case .registered:
+            log(.COMPLETE, "Registration complete — signing available (kid: \(kid.prefix(12))...)", level: .success)
             logger.info("KeyManager: registration success → .registered")
             state = .registered
             saveRegistrationState(.registered)
         case .kidConflict:
+            log(.COMPLETE, "kid_conflict (idempotent success) — signing available", level: .success)
             logger.info("KeyManager: kid_conflict (idempotent success) → .registered")
             state = .registered
             saveRegistrationState(.registered)
         case .challengeExpired:
+            log(.CHALLENGE, "Challenge expired — retrying with fresh challenge", level: .warning)
             await handleChallengeExpired(keyPair: keyPair, kid: kid, pem: pem, deviceModel: model, iosVersion: ios, appVersion: app, attemptNumber: attemptNumber)
         case .definitiveFailure(let code):
+            log(.COMPLETE, "Registration failed permanently — error: \(code)", level: .error)
             logger.error("KeyManager: definitive failure (\(code)) → .failedPermanent")
+            lastError = code
             state = .failedPermanent
             saveRegistrationState(.failedPermanent)
         case .transientFailure, .revocationCheckPassed, .revoked:
+            log(.REGISTER, "Transient failure on attempt \(attemptNumber)", level: .warning)
             await handleTransientFailure(keyPair: keyPair, attemptNumber: attemptNumber)
         }
     }
@@ -377,6 +458,7 @@ final class KeyManager: ObservableObject {
             saveRegistrationState(.registered)
         case .definitiveFailure(let code):
             logger.error("KeyManager: definitive failure after challenge_expired (\(code)) → .failedPermanent")
+            lastError = code
             state = .failedPermanent
             saveRegistrationState(.failedPermanent)
         case .challengeExpired, .transientFailure:
@@ -408,11 +490,14 @@ final class KeyManager: ObservableObject {
         if attemptNumber >= 3 {
             // Network/transient exhaustion: fail this session only — do NOT persist to Keychain
             // so the next app launch will attempt registration again.
+            log(.COMPLETE, "Session failed (attempt budget exhausted) — will retry on next launch", level: .warning)
             logger.error("KeyManager: max retry attempts reached — session failed, will retry on next launch")
             state = .failedPermanent
             return
         }
         state = .retrying
+        let delay = Int(pow(2.0, Double(attemptNumber - 1)))
+        log(.RETRY, "Scheduling retry #\(attemptNumber + 1) in \(delay)s (exponential backoff)...", level: .warning)
         logger.info("KeyManager: → .retrying (attempt \(attemptNumber))")
         let delayNs = UInt64(pow(2.0, Double(attemptNumber - 1)) * 1_000_000_000)
         try? await Task.sleep(nanoseconds: delayNs)
