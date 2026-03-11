@@ -1,9 +1,6 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import Combine
-import CryptoKit
 import OSLog
-
-nonisolated(unsafe) private let logger = Logger(subsystem: "com.zoe", category: "CaptureViewModel")
 
 @MainActor
 final class CaptureViewModel: NSObject, ObservableObject {
@@ -25,7 +22,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
     private var timerTask: Task<Void, Never>?
 
     // Dedicated serial queue for all AVCaptureSession setup/teardown (AVFoundation pattern)
-    nonisolated(unsafe) private static let sessionQueue = DispatchQueue(
+    private static let sessionQueue = DispatchQueue(
         label: "com.zoe.captureSessionQueue", qos: .userInitiated
     )
 
@@ -66,7 +63,8 @@ final class CaptureViewModel: NSObject, ObservableObject {
         guard let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let videoInput = try? AVCaptureDeviceInput(device: videoDevice),
               session.canAddInput(videoInput) else {
-            logger.warning("No video device available (expected on Simulator)")
+            Logger(subsystem: "com.zoe", category: "CaptureViewModel")
+                .warning("No video device available (expected on Simulator)")
             session.commitConfiguration()
             return
         }
@@ -89,11 +87,20 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     func capturePhoto() {
         guard permissionStatus == .authorized, session.isRunning else { return }
-        var settings = AVCapturePhotoSettings()
-        if photoOutput.availablePhotoCodecTypes.contains(.hevc) {
-            settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
+        let availableCodecs = photoOutput.availablePhotoCodecTypes
+        let settings: AVCapturePhotoSettings
+        if let codec = Self.preferredPhotoCodec(from: availableCodecs) {
+            settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: codec])
+        } else {
+            settings = AVCapturePhotoSettings()
         }
         photoOutput.capturePhoto(with: settings, delegate: self)
+    }
+
+    nonisolated static func preferredPhotoCodec(from availableCodecs: [AVVideoCodecType]) -> AVVideoCodecType? {
+        if availableCodecs.contains(.jpeg) { return .jpeg }
+        if availableCodecs.contains(.hevc) { return .hevc }
+        return nil
     }
 
     private func handleCapturedPhoto(_ data: Data) {
@@ -102,10 +109,17 @@ final class CaptureViewModel: NSObject, ObservableObject {
         do {
             try data.write(to: fileURL)
             Task.detached { [weak self] in
-                try? await self?.signingPipeline.sign(fileURL: fileURL)
+                guard let self else { return }
+                do {
+                    try await self.signingPipeline.sign(fileURL: fileURL)
+                } catch {
+                    Logger(subsystem: "com.zoe", category: "CaptureViewModel")
+                        .error("Failed to sign captured photo: \(String(describing: error), privacy: .public)")
+                }
             }
         } catch {
-            logger.error("Failed to write captured photo to temp file: \(error)")
+            Logger(subsystem: "com.zoe", category: "CaptureViewModel")
+                .error("Failed to write captured photo to temp file: \(error)")
         }
     }
 
@@ -159,7 +173,8 @@ extension CaptureViewModel: AVCapturePhotoCaptureDelegate {
         error: Error?
     ) {
         guard error == nil, let data = photo.fileDataRepresentation() else {
-            logger.error("Photo capture failed: \(String(describing: error))")
+            Logger(subsystem: "com.zoe", category: "CaptureViewModel")
+                .error("Photo capture failed: \(String(describing: error))")
             return
         }
         Task { @MainActor [weak self] in
@@ -183,11 +198,18 @@ extension CaptureViewModel: AVCaptureFileOutputRecordingDelegate {
             self?.stopTimer()
         }
         guard error == nil else {
-            logger.error("Video recording failed: \(String(describing: error))")
+            Logger(subsystem: "com.zoe", category: "CaptureViewModel")
+                .error("Video recording failed: \(String(describing: error))")
             return
         }
         Task.detached { [weak self] in
-            try? await self?.signingPipeline.sign(fileURL: outputFileURL)
+            guard let self else { return }
+            do {
+                try await self.signingPipeline.sign(fileURL: outputFileURL)
+            } catch {
+                Logger(subsystem: "com.zoe", category: "CaptureViewModel")
+                    .error("Failed to sign recorded video: \(String(describing: error), privacy: .public)")
+            }
         }
     }
 }
