@@ -71,17 +71,27 @@ final class KeyManager: ObservableObject {
     // MARK: - Public API
 
     func initialise() async {
-        // a) Load persisted state
+        // a) Detect fresh install: UserDefaults is wiped on delete; Keychain is not.
+        //    If the install sentinel is absent, purge any stale Keychain entries so a
+        //    previous .failedPermanent can't block registration after reinstall.
+        let installSentinelKey = keychainService + ".installed"
+        if initialStateOverride == nil && UserDefaults.standard.string(forKey: installSentinelKey) == nil {
+            logger.info("KeyManager: fresh install detected — clearing stale Keychain state")
+            purgeKeychainState()
+            UserDefaults.standard.set("1", forKey: installSentinelKey)
+        }
+
+        // b) Load persisted state
         let persisted = initialStateOverride ?? loadPersistedState()
 
-        // b) If .failedPermanent: set state, return
+        // c) If .failedPermanent: set state, return
         if persisted == .failedPermanent {
             state = .failedPermanent
             logger.info("KeyManager: loaded .failedPermanent from Keychain — skipping registration")
             return
         }
 
-        // c) Load or generate SE key
+        // d) Load or generate SE key
         let keyPair: (dataRep: Data, publicKey: P256.Signing.PublicKey)
         do {
             keyPair = try generateOrLoadSEKey()
@@ -180,6 +190,17 @@ final class KeyManager: ObservableObject {
 
     // MARK: - Keychain State Persistence
 
+    private func purgeKeychainState() {
+        for account in [keychainStateKey, keychainKeyTag] {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: keychainService,
+                kSecAttrAccount as String: account
+            ]
+            SecItemDelete(query as CFDictionary)
+        }
+    }
+
     private func saveRegistrationState(_ regState: RegistrationState) {
         let stateString: String
         switch regState {
@@ -247,7 +268,7 @@ final class KeyManager: ObservableObject {
         let kid = deriveKid(from: keyPair.publicKey)
         let pem = exportPublicKeyAsPEM(keyPair.publicKey)
         let model = normalizedDeviceModel()
-        let ios = await UIDevice.current.systemVersion
+        let ios = UIDevice.current.systemVersion
         let app = appVersion()
 
         let outcome = await Self.runRegistrationNetwork(
@@ -282,6 +303,7 @@ final class KeyManager: ObservableObject {
         kid: String, pem: String,
         deviceModel: String, iosVersion: String, appVersion: String
     ) async -> RegistrationNetworkOutcome {
+        let logger = Logger(subsystem: "com.zoe.app", category: "KeyManager")
         do {
             let attKeyID = try await attestationService.generateKeyID()
             let challengeResp = try await networking.challenge(kid: nil)
@@ -305,10 +327,24 @@ final class KeyManager: ObservableObject {
                 case "challenge_expired": return .challengeExpired
                 default: return .definitiveFailure(code: code)
                 }
-            default:
+            case .pinningFailed:
+                logger.error("KeyManager: registration failed — certificate pinning rejected server cert")
+                return .transientFailure
+            case .networkError(let underlying):
+                logger.error("KeyManager: registration failed — network error: \(underlying.localizedDescription)")
+                return .transientFailure
+            case .serverError:
+                logger.error("KeyManager: registration failed — server error (5xx)")
+                return .transientFailure
+            case .unexpectedResponse(let statusCode):
+                logger.error("KeyManager: registration failed — unexpected HTTP \(statusCode)")
+                return .transientFailure
+            case .decodingFailed(let underlying):
+                logger.error("KeyManager: registration failed — decoding error: \(underlying.localizedDescription)")
                 return .transientFailure
             }
         } catch {
+            logger.error("KeyManager: registration failed — unexpected error: \(error.localizedDescription) | \(String(describing: error))")
             return .transientFailure
         }
     }
@@ -361,9 +397,10 @@ final class KeyManager: ObservableObject {
 
     private func handleTransientFailure(keyPair: (dataRep: Data, publicKey: P256.Signing.PublicKey), attemptNumber: Int) async {
         if attemptNumber >= 3 {
-            logger.error("KeyManager: max retry attempts reached → .failedPermanent")
+            // Network/transient exhaustion: fail this session only — do NOT persist to Keychain
+            // so the next app launch will attempt registration again.
+            logger.error("KeyManager: max retry attempts reached — session failed, will retry on next launch")
             state = .failedPermanent
-            saveRegistrationState(.failedPermanent)
             return
         }
         state = .retrying
