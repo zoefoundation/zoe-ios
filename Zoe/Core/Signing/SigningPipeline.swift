@@ -52,13 +52,14 @@ actor SigningPipeline {
     ///
     /// - Parameter fileURL: URL of the encoded media file in the temp directory.
     func sign(fileURL: URL) async throws {
-        // Snapshot @MainActor state in one hop (KeyManager is @MainActor)
-        let (isAvailable, kid, km) = await MainActor.run { [keyManager] in
-            (keyManager?.isSigningAvailable == true, keyManager?.kid, keyManager)
+        guard let km = keyManager else {
+            await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
+            try? FileManager.default.removeItem(at: fileURL)
+            return
         }
 
-        // UNSIGNED FALLBACK: signing unavailable — save original to Photos and return
-        guard isAvailable, let kid, let km else {
+        let (isAvailable, kid) = await MainActor.run { (km.isSigningAvailable, km.kid) }
+        guard isAvailable, let kid else {
             await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
             try? FileManager.default.removeItem(at: fileURL)
             return
@@ -130,4 +131,3 @@ actor SigningPipeline {
         }
     }
 }
-
