@@ -38,4 +38,11 @@ actor SigningPipeline {
 
         return try C2PAEmbedder.embed(manifest: manifest, signer: signer, into: jpegData)
     }
+
+    /// Called by CaptureViewModel after each photo or video capture.
+    /// Story 2.5 implements: SHA-256 hash → C2PA manifest → SE sign → C2PAEmbedder → Photo Library save.
+    /// - Parameter fileURL: URL of the encoded media file in the temp directory.
+    func sign(fileURL: URL) async throws {
+        // TODO (Story 2.5): hash → manifest → SE sign → C2PAEmbedder → save to photo library
+    }
 }
