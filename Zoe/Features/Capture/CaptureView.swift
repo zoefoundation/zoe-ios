@@ -5,6 +5,7 @@ import UIKit
 struct CaptureView: View {
     @StateObject private var viewModel = CaptureViewModel()
     @EnvironmentObject private var appState: AppState
+    @Environment(\.modelContext) private var modelContext
     #if DEBUG
     @State private var showingDebugView = false
     #endif
@@ -17,7 +18,7 @@ struct CaptureView: View {
                 cameraView
             }
         }
-        .task { await viewModel.configure(keyManager: appState.keyManager) }
+        .task { await viewModel.configure(keyManager: appState.keyManager, libraryStore: LibraryStore(modelContext: modelContext)) }
         .onDisappear { viewModel.stopSession() }
         #if DEBUG
         .sheet(isPresented: $showingDebugView) {

@@ -4,6 +4,13 @@ import CryptoKit
 import Photos
 import UIKit
 
+/// Outcome of `SigningPipeline.sign(fileURL:)`, carrying the sandbox URL and provenance state.
+/// Sendable: URL and VerificationState (String rawValue enum) are both Sendable.
+struct SigningOutcome: Sendable {
+    let sandboxURL: URL
+    let verificationState: VerificationState
+}
+
 /// Orchestrates the full signing pipeline: manifest construction → C2PA embedding via c2pa-ios.
 actor SigningPipeline {
 
@@ -51,18 +58,22 @@ actor SigningPipeline {
     /// All errors are silently absorbed — the unsigned original is saved as a fallback (NFR13).
     ///
     /// - Parameter fileURL: URL of the encoded media file in the temp directory.
-    func sign(fileURL: URL) async throws {
+    /// - Returns: `SigningOutcome` with sandbox URL and verification state, or nil if sandbox save failed.
+    @discardableResult
+    func sign(fileURL: URL) async throws -> SigningOutcome? {
         guard let km = keyManager else {
+            let sandboxURL = saveToSandbox(url: fileURL)
             await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
             try? FileManager.default.removeItem(at: fileURL)
-            return
+            return sandboxURL.map { SigningOutcome(sandboxURL: $0, verificationState: .unsigned) }
         }
 
         let (isAvailable, kid) = await MainActor.run { (km.isSigningAvailable, km.kid) }
         guard isAvailable, let kid else {
+            let sandboxURL = saveToSandbox(url: fileURL)
             await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
             try? FileManager.default.removeItem(at: fileURL)
-            return
+            return sandboxURL.map { SigningOutcome(sandboxURL: $0, verificationState: .unsigned) }
         }
 
         do {
@@ -103,15 +114,33 @@ actor SigningPipeline {
                 format: format
             )
 
-            // 8. Save signed file to Photos library, clean up both temp files
+            // 8. Save signed file to sandbox, then Photos; clean up both temp files
+            let sandboxURL = saveToSandbox(url: signedURL)
             await saveToPhotoLibrary(url: signedURL, isVideo: fileURL.isVideoFile)
             try? FileManager.default.removeItem(at: signedURL)
             try? FileManager.default.removeItem(at: fileURL)
+            return sandboxURL.map { SigningOutcome(sandboxURL: $0, verificationState: .signed) }
 
         } catch {
             // SILENT ERROR ABSORPTION: signing failed — save unsigned original (NFR13)
+            let sandboxURL = saveToSandbox(url: fileURL)
             await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
             try? FileManager.default.removeItem(at: fileURL)
+            return sandboxURL.map { SigningOutcome(sandboxURL: $0, verificationState: .unsigned) }
+        }
+    }
+
+    nonisolated private func saveToSandbox(url: URL) -> URL? {
+        let mediaDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ZoeMedia")
+        try? FileManager.default.createDirectory(at: mediaDir, withIntermediateDirectories: true, attributes: nil)
+        let dest = mediaDir.appendingPathComponent(url.lastPathComponent)
+        try? FileManager.default.removeItem(at: dest)
+        do {
+            try FileManager.default.copyItem(at: url, to: dest)
+            return dest
+        } catch {
+            return nil
         }
     }
 

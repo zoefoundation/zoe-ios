@@ -20,6 +20,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
     nonisolated(unsafe) private let movieOutput = AVCaptureMovieFileOutput()
     private let signingPipeline: SigningPipeline
     private weak var keyManager: KeyManager?
+    private var libraryStore: LibraryStore?
     private var timerTask: Task<Void, Never>?
 
     // Dedicated serial queue for all AVCaptureSession setup/teardown (AVFoundation pattern)
@@ -34,11 +35,12 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     // MARK: - Configuration
 
-    func configure(keyManager: KeyManager? = nil) async {
+    func configure(keyManager: KeyManager? = nil, libraryStore: LibraryStore? = nil) async {
         if let km = keyManager { self.keyManager = km }
         if let km = keyManager {
             await signingPipeline.setKeyManager(km)
         }
+        if let store = libraryStore { self.libraryStore = store }
 
         let videoGranted = await AVCaptureDevice.requestAccess(for: .video)
         _ = await AVCaptureDevice.requestAccess(for: .audio)
@@ -115,11 +117,16 @@ final class CaptureViewModel: NSObject, ObservableObject {
             try data.write(to: fileURL)
             Task.detached { [weak self] in
                 guard let self else { return }
-                do {
-                    try await self.signingPipeline.sign(fileURL: fileURL)
-                } catch {
-                    Logger(subsystem: "com.zoe", category: "CaptureViewModel")
-                        .error("Failed to sign captured photo: \(String(describing: error), privacy: .public)")
+                let outcome = try? await self.signingPipeline.sign(fileURL: fileURL)
+                if let outcome {
+                    await MainActor.run { [weak self] () -> Void in
+                        self?.libraryStore?.addItem(
+                            mediaURL: outcome.sandboxURL,
+                            mediaType: "photo",
+                            source: "captured",
+                            verificationState: outcome.verificationState
+                        )
+                    }
                 }
             }
         } catch {
@@ -209,11 +216,16 @@ extension CaptureViewModel: AVCaptureFileOutputRecordingDelegate {
         }
         Task.detached { [weak self] in
             guard let self else { return }
-            do {
-                try await self.signingPipeline.sign(fileURL: outputFileURL)
-            } catch {
-                Logger(subsystem: "com.zoe", category: "CaptureViewModel")
-                    .error("Failed to sign recorded video: \(String(describing: error), privacy: .public)")
+            let outcome = try? await self.signingPipeline.sign(fileURL: outputFileURL)
+            if let outcome {
+                await MainActor.run { [weak self] () -> Void in
+                    self?.libraryStore?.addItem(
+                        mediaURL: outcome.sandboxURL,
+                        mediaType: "video",
+                        source: "captured",
+                        verificationState: outcome.verificationState
+                    )
+                }
             }
         }
     }
