@@ -255,8 +255,15 @@ final class SigningPipelineTests {
         try jpegData.write(to: tmpURL)
         defer { try? FileManager.default.removeItem(at: tmpURL) }
 
-        // saveToPhotoLibrary silently fails in test environment — focus is no-crash/no-throw
-        try await pipeline.sign(fileURL: tmpURL)
+        // Verify Story 2.6 wiring contract: fallback still yields a sandbox outcome for LibraryStore handoff.
+        let outcome = try await pipeline.sign(fileURL: tmpURL)
+        #expect(outcome != nil)
+        #expect(outcome?.verificationState == .unsigned)
+        #expect(outcome?.sandboxURL.lastPathComponent == tmpURL.lastPathComponent)
+        if let sandboxURL = outcome?.sandboxURL {
+            #expect(FileManager.default.fileExists(atPath: sandboxURL.path))
+            try? FileManager.default.removeItem(at: sandboxURL)
+        }
     }
 
     @Test("sign(fileURL:) with software key KeyManager completes without throwing")
@@ -307,5 +314,16 @@ final class SigningPipelineTests {
         let start = Date()
         try await pipeline.sign(fileURL: tmpURL)
         #expect(Date().timeIntervalSince(start) < 0.5)
+    }
+
+    @Test("sign(fileURL:) returns nil when source file is missing")
+    func testSignFileURL_missingInput_returnsNil() async throws {
+        let pipeline = SigningPipeline()
+        let missingURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString).jpg")
+        try? FileManager.default.removeItem(at: missingURL)
+
+        let outcome = try await pipeline.sign(fileURL: missingURL)
+        #expect(outcome == nil)
     }
 }
