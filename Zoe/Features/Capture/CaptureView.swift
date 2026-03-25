@@ -98,9 +98,11 @@ struct CaptureView: View {
                     HStack {
                         LibraryThumbnailButton { showingLibrary = true }
                             .padding(.leading, 20)
+                            .padding(.bottom, 14)
                         Spacer()
                         cameraFlipButton
                             .padding(.trailing, 20)
+                            .padding(.bottom, 14)
                     }
                     .frame(height: 49)
                 }
@@ -122,9 +124,10 @@ struct CaptureView: View {
         Button { viewModel.toggleCamera() } label: {
             Image(systemName: "arrow.triangle.2.circlepath.camera.fill")
                 .font(.system(size: 22))
-                .foregroundStyle(.primary)
+                .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
         }
+        .tint(.white)
         .accessibilityIdentifier(AX.Capture.cameraFlipButton)
     }
 
@@ -241,15 +244,15 @@ private struct LibraryThumbnailButton: View {
                     Image(uiImage: img)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 52, height: 52)
+                        .frame(width: 44, height: 44)
                         .clipShape(Circle())
+                        .overlay(Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1.5))
                 } else {
                     Circle()
-                        .fill(Color(.systemGray3))
-                        .frame(width: 52, height: 52)
+                        .strokeBorder(.white.opacity(0.5), lineWidth: 1.5)
+                        .frame(width: 44, height: 44)
                 }
             }
-            .overlay(Circle().strokeBorder(.white.opacity(0.4), lineWidth: 1.5))
         }
         .accessibilityIdentifier(AX.Capture.libraryThumbnailButton)
         .task(id: items.first?.id) { await loadThumbnail() }
@@ -278,8 +281,8 @@ private struct CaptureModeTabBar: UIViewRepresentable {
     func makeUIView(context: Context) -> UITabBar {
         let bar = UITabBar()
 
-        let photo = UITabBarItem(title: "Photo", image: nil, tag: 0)
-        let video = UITabBarItem(title: "Video", image: nil, tag: 1)
+        let photo = UITabBarItem(title: "Photo", image: UIImage(systemName: "camera.fill"), tag: 0)
+        let video = UITabBarItem(title: "Video", image: UIImage(systemName: "video.fill"), tag: 1)
 
         // Bigger, semibold text — same weight feel as the old Capture/Library bar
         let font = UIFont.systemFont(ofSize: 13, weight: .semibold)
