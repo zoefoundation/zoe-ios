@@ -52,17 +52,43 @@ struct CaptureView: View {
             CameraPreviewView(session: viewModel.session)
                 .ignoresSafeArea()
 
+            // White flash on photo capture
+            Color.white
+                .opacity(viewModel.captureFlash ? 1 : 0)
+                .animation(.easeOut(duration: 0.15), value: viewModel.captureFlash)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             if viewModel.isRecording {
                 recordingIndicator
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .padding(.top, 8)
             }
 
+            // Mode toggle — top right
+            modeToogleButton
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(.top, 16)
+                .padding(.trailing, 16)
+
             VStack {
                 Spacer()
                 shutterControl
                     .padding(.bottom, 24)
             }
+        }
+    }
+
+    // MARK: - Mode toggle button
+
+    private var modeToogleButton: some View {
+        Button { viewModel.toggleCaptureMode() } label: {
+            Image(systemName: viewModel.captureMode == .photo ? "video.fill" : "camera.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(10)
+                .background(.black.opacity(0.35))
+                .clipShape(Circle())
         }
     }
 
@@ -84,12 +110,13 @@ struct CaptureView: View {
     }
 
     // MARK: - Shutter / record button (72pt)
-    // Short tap = photo; long-press = start video; tap while recording = stop
+    // Photo mode: tap = photo, long-press = video
+    // Video mode: tap = start/stop recording
 
     private var shutterControl: some View {
         Group {
             if viewModel.isRecording {
-                // Stop recording button — red inner circle
+                // Stop recording button — red inner square
                 Button { viewModel.stopRecording() } label: {
                     ZStack {
                         Circle()
@@ -100,8 +127,8 @@ struct CaptureView: View {
                             .frame(width: 32, height: 32)
                     }
                 }
-            } else {
-                // Shutter button — white filled circle; long press starts video
+            } else if viewModel.captureMode == .photo {
+                // Photo shutter — white circle, long-press starts video
                 Circle()
                     .fill(.white)
                     .frame(width: 72, height: 72)
@@ -121,6 +148,17 @@ struct CaptureView: View {
                         }
                     }
                     #endif
+            } else {
+                // Video mode shutter — white circle with red ring
+                Circle()
+                    .fill(.white)
+                    .frame(width: 72, height: 72)
+                    .overlay(
+                        Circle()
+                            .strokeBorder(.red.opacity(0.85), lineWidth: 3)
+                            .frame(width: 80, height: 80)
+                    )
+                    .onTapGesture { viewModel.startRecording() }
             }
         }
     }

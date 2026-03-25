@@ -2,6 +2,9 @@
 import Combine
 import OSLog
 import Photos
+import UIKit
+
+enum CaptureMode { case photo, video }
 
 @MainActor
 final class CaptureViewModel: NSObject, ObservableObject {
@@ -12,8 +15,10 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     // MARK: - Published state
     @Published var permissionStatus: AVAuthorizationStatus = .notDetermined
+    @Published var captureMode: CaptureMode = .photo
     @Published var isRecording: Bool = false
     @Published var recordingElapsed: TimeInterval = 0
+    @Published var captureFlash: Bool = false
 
     // MARK: - Private
     nonisolated(unsafe) private let photoOutput = AVCapturePhotoOutput()
@@ -22,6 +27,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
     private weak var keyManager: KeyManager?
     private var libraryStore: LibraryStore?
     private var timerTask: Task<Void, Never>?
+    private var isSessionConfigured = false
 
     // Dedicated serial queue for all AVCaptureSession setup/teardown (AVFoundation pattern)
     private static let sessionQueue = DispatchQueue(
@@ -43,6 +49,12 @@ final class CaptureViewModel: NSObject, ObservableObject {
         await signingPipeline.setAPIClient(APIClient.shared)
         if let store = libraryStore { self.libraryStore = store }
 
+        // On subsequent tab returns: skip full setup, just restart the session
+        if isSessionConfigured {
+            resumeSession()
+            return
+        }
+
         let videoGranted = await AVCaptureDevice.requestAccess(for: .video)
         _ = await AVCaptureDevice.requestAccess(for: .audio)
         _ = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
@@ -59,6 +71,13 @@ final class CaptureViewModel: NSObject, ObservableObject {
                 continuation.resume()
             }
         }
+        isSessionConfigured = true
+    }
+
+    private func resumeSession() {
+        let session = self.session
+        guard !session.isRunning else { return }
+        Self.sessionQueue.async { session.startRunning() }
     }
 
     private nonisolated static func configureSession(
@@ -95,6 +114,12 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     func capturePhoto() {
         guard permissionStatus == .authorized, session.isRunning else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        captureFlash = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
+            captureFlash = false
+        }
         let availableCodecs = photoOutput.availablePhotoCodecTypes
         let settings: AVCapturePhotoSettings
         if let codec = Self.preferredPhotoCodec(from: availableCodecs) {
@@ -138,8 +163,13 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     // MARK: - Video capture
 
+    func toggleCaptureMode() {
+        captureMode = captureMode == .photo ? .video : .photo
+    }
+
     func startRecording() {
         guard permissionStatus == .authorized, session.isRunning, !isRecording else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         let outputURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString + ".mov")
         movieOutput.startRecording(to: outputURL, recordingDelegate: self)
