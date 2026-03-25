@@ -98,15 +98,14 @@ struct CaptureView: View {
                     HStack {
                         LibraryThumbnailButton { showingLibrary = true }
                             .padding(.leading, 20)
-                            .padding(.bottom, 14)
                         Spacer()
                         cameraFlipButton
                             .padding(.trailing, 20)
-                            .padding(.bottom, 14)
                     }
-                    .frame(height: 49)
+                    .frame(height: 49, alignment: .center)
                 }
                 .frame(height: 49)
+                .padding(.bottom, 20)
                 .background {
                     Rectangle()
                         .fill(.bar)
@@ -286,9 +285,14 @@ private struct CaptureModeTabBar: UIViewRepresentable {
 
         // Bigger, semibold text — same weight feel as the old Capture/Library bar
         let font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        // Shift items up by 10pt to visually center them within the 49pt frame
+        // when the bar is pushed 20pt above the home indicator
+        let insets = UIEdgeInsets(top: -10, left: 0, bottom: 10, right: 0)
         [photo, video].forEach { item in
             item.setTitleTextAttributes([.font: font], for: .normal)
             item.setTitleTextAttributes([.font: font], for: .selected)
+            item.imageInsets = insets
+            item.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: -10)
         }
 
         bar.items = [photo, video]
