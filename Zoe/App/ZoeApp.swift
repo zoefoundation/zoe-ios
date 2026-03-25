@@ -19,14 +19,8 @@ struct ZoeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TabView {
-                CaptureView()
-                    .tabItem { Label("Capture", systemImage: "camera") }
-
-                LibraryView()
-                    .tabItem { Label("Library", systemImage: "photo.on.rectangle") }
-            }
-            .environmentObject(appState)
+            CaptureView()
+                .environmentObject(appState)
         }
         .modelContainer(Self.sharedModelContainer)
     }

@@ -16,6 +16,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
     // MARK: - Published state
     @Published var permissionStatus: AVAuthorizationStatus = .notDetermined
     @Published var captureMode: CaptureMode = .photo
+    @Published var cameraPosition: AVCaptureDevice.Position = .back
     @Published var isRecording: Bool = false
     @Published var recordingElapsed: TimeInterval = 0
     @Published var captureFlash: Bool = false
@@ -113,7 +114,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
     // MARK: - Photo capture
 
     func capturePhoto() {
-        guard permissionStatus == .authorized, session.isRunning else { return }
+        guard permissionStatus == .authorized, session.isRunning, !isRecording else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         captureFlash = true
         Task { @MainActor in
@@ -165,6 +166,27 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     func toggleCaptureMode() {
         captureMode = captureMode == .photo ? .video : .photo
+    }
+
+    func toggleCamera() {
+        cameraPosition = cameraPosition == .back ? .front : .back
+        let session = self.session
+        let newPosition = cameraPosition
+        Self.sessionQueue.async {
+            session.beginConfiguration()
+            for input in session.inputs {
+                if let deviceInput = input as? AVCaptureDeviceInput,
+                   deviceInput.device.hasMediaType(.video) {
+                    session.removeInput(deviceInput)
+                }
+            }
+            if let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: newPosition),
+               let videoInput = try? AVCaptureDeviceInput(device: videoDevice),
+               session.canAddInput(videoInput) {
+                session.addInput(videoInput)
+            }
+            session.commitConfiguration()
+        }
     }
 
     func startRecording() {

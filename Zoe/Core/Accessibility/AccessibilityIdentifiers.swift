@@ -4,28 +4,26 @@ import Foundation
 // All identifiers follow [screen].[element].[role] naming convention.
 // See docs/accessibility-identifiers.md for full spec.
 enum AX {
-    enum App {
-        static let tabCapture = "app.tab_capture.tab"
-        static let tabLibrary = "app.tab_library.tab"
-    }
-
     enum Capture {
-        static let permissionDeniedView = "capture.permission_denied.view"
-        static let openSettingsButton   = "capture.open_settings.button"
-        static let cameraPreview        = "capture.camera_preview.view"
-        static let modeToggleButton     = "capture.mode_toggle.button"
-        static let recordingBadge       = "capture.recording_badge.badge"
-        static let shutterPhotoButton   = "capture.shutter_photo.button"
-        static let shutterVideoButton   = "capture.shutter_video.button"
-        static let shutterStopButton    = "capture.shutter_stop.button"
+        static let permissionDeniedView     = "capture.permission_denied.view"
+        static let openSettingsButton       = "capture.open_settings.button"
+        static let cameraPreview            = "capture.camera_preview.view"
+        static let cameraFlipButton         = "capture.camera_flip.button"
+        static let photoVideoToggle         = "capture.photo_video_mode.toggle"
+        static let libraryThumbnailButton   = "capture.library_thumbnail.button"
+        static let recordingBadge           = "capture.recording_badge.badge"
+        static let shutterPhotoButton       = "capture.shutter_photo.button"
+        static let shutterVideoButton       = "capture.shutter_video.button"
+        static let shutterStopButton        = "capture.shutter_stop.button"
     }
 
     enum Library {
-        static let screenView    = "library.screen.view"
-        static let emptyState    = "library.empty_state.empty"
-        static let gridView      = "library.grid.view"
-        static let importButton  = "library.import.button"
-        static let filterAll     = "library.filter_all.button"
+        static let screenView     = "library.screen.view"
+        static let emptyState     = "library.empty_state.empty"
+        static let gridView       = "library.grid.view"
+        static let dismissButton  = "library.dismiss.button"
+        static let importButton   = "library.import.button"
+        static let filterAll      = "library.filter_all.button"
         static let filterCaptured = "library.filter_captured.button"
         static let filterImported = "library.filter_imported.button"
         static func cell(_ id: UUID) -> String {
@@ -55,6 +53,7 @@ enum AX {
 
     #if DEBUG
     enum Debug {
+        static let openButton        = "debug.open.button"
         static let sheet             = "debug.sheet.sheet"
         static let registrationState = "debug.registration_state.label"
         static let signingAvailable  = "debug.signing_available.label"
