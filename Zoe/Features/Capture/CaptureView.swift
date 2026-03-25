@@ -105,6 +105,7 @@ struct CaptureView: View {
                     }
                 }
                 .frame(height: 49)
+                .padding(.bottom, -12)
                 .accessibilityIdentifier(AX.Capture.photoVideoToggle)
             }
         }
