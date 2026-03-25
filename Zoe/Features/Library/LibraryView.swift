@@ -43,7 +43,7 @@ private struct LibraryViewContent: View {
         }
         .accessibilityIdentifier(AX.Library.screenView)
         .onOpenURL { url in
-            url.startAccessingSecurityScopedResource()
+            _ = url.startAccessingSecurityScopedResource()
             defer { url.stopAccessingSecurityScopedResource() }
             Task { await viewModel.handleIncomingURL(url) }
         }

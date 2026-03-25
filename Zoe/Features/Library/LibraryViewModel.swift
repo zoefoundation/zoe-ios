@@ -100,7 +100,7 @@ final class LibraryViewModel: ObservableObject {
         }
     }
 
-    private func copyToSandbox(from url: URL, ext: String) -> URL? {
+    nonisolated private func copyToSandbox(from url: URL, ext: String) -> URL? {
         let mediaDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ZoeMedia")
         try? FileManager.default.createDirectory(at: mediaDir, withIntermediateDirectories: true, attributes: nil)
