@@ -29,6 +29,9 @@ final class CaptureViewModel: NSObject, ObservableObject {
     @Published var isRecording: Bool = false
     @Published var recordingElapsed: TimeInterval = 0
     @Published var captureFlash: Bool = false
+    // Haptic triggers — incremented to fire .sensoryFeedback in the view (most reliable on-device pattern)
+    @Published var hapticCaptureTrigger: Int = 0
+    @Published var hapticRecordingTrigger: Int = 0
 
     // MARK: - Private
     nonisolated(unsafe) private let photoOutput = AVCapturePhotoOutput()
@@ -38,8 +41,6 @@ final class CaptureViewModel: NSObject, ObservableObject {
     private var libraryStore: LibraryStore?
     private var timerTask: Task<Void, Never>?
     private var isSessionConfigured = false
-    // Stored generator: creating+discarding inline is unreliable; prepare() arms the Taptic Engine
-    private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
     // Dedicated serial queue for all AVCaptureSession setup/teardown (AVFoundation pattern)
     private static let sessionQueue = DispatchQueue(
@@ -49,7 +50,6 @@ final class CaptureViewModel: NSObject, ObservableObject {
     init(signingPipeline: SigningPipeline = SigningPipeline(), keyManager: KeyManager? = nil) {
         self.signingPipeline = signingPipeline
         self.keyManager = keyManager
-        impactFeedback.prepare()
     }
 
     // MARK: - Configuration
@@ -127,8 +127,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     func capturePhoto() {
         guard permissionStatus == .authorized, session.isRunning, !isRecording else { return }
-        impactFeedback.impactOccurred()
-        impactFeedback.prepare()
+        hapticCaptureTrigger += 1
         captureFlash = true
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(100))
@@ -204,8 +203,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     func startRecording() {
         guard permissionStatus == .authorized, session.isRunning, !isRecording else { return }
-        impactFeedback.impactOccurred()
-        impactFeedback.prepare()
+        hapticRecordingTrigger += 1
         let outputURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString + ".mov")
         movieOutput.startRecording(to: outputURL, recordingDelegate: self)
@@ -215,8 +213,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
 
     func stopRecording() {
         movieOutput.stopRecording()
-        impactFeedback.impactOccurred()
-        impactFeedback.prepare()
+        hapticRecordingTrigger += 1
     }
 
     // MARK: - Session teardown

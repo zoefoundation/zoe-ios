@@ -22,6 +22,9 @@ struct CaptureView: View {
         }
         .task { await viewModel.configure(keyManager: appState.keyManager, libraryStore: LibraryStore(modelContext: modelContext)) }
         .onDisappear { viewModel.stopSession() }
+        .sensoryFeedback(.selection, trigger: viewModel.captureMode)
+        .sensoryFeedback(.impact(weight: .heavy, intensity: 1.0), trigger: viewModel.hapticCaptureTrigger)
+        .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.hapticRecordingTrigger)
         .sheet(isPresented: $showingLibrary) {
             LibraryView()
         }
@@ -82,40 +85,70 @@ struct CaptureView: View {
                 .padding(.leading, 16)
             #endif
 
-            // Top-right: front/back camera flip
-            cameraFlipButton
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                .padding(.top, 16)
-                .padding(.trailing, 16)
-
-            // Bottom: thumbnail + shutter + scrollable mode picker
-            VStack(spacing: 0) {
+            // Shutter — floating above the bottom bar
+            VStack {
                 Spacer()
-                HStack(alignment: .center) {
-                    LibraryThumbnailButton { showingLibrary = true }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    shutterControl
-                    Spacer()
-                        .frame(maxWidth: .infinity)
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 20)
-                CameraModePicker(selection: $viewModel.captureMode)
-                    .padding(.bottom, 8)
+                shutterControl
+                    .padding(.bottom, 96)
+            }
+
+            // Bottom bar — tab-bar style, pinned to extreme bottom
+            VStack {
+                Spacer()
+                captureBottomBar
             }
         }
-        .sensoryFeedback(.selection, trigger: viewModel.captureMode)
     }
 
-    // MARK: - Camera flip button (top-right)
+    // MARK: - Bottom bar (tab-bar style: thumbnail | PHOTO  VIDEO | flip)
+
+    private var captureBottomBar: some View {
+        HStack(spacing: 0) {
+            LibraryThumbnailButton { showingLibrary = true }
+                .padding(.leading, 20)
+
+            Spacer()
+
+            modeTabButton(systemImage: "camera.fill", label: "PHOTO", mode: .photo)
+            modeTabButton(systemImage: "video.fill", label: "VIDEO", mode: .video)
+
+            Spacer()
+
+            cameraFlipButton
+                .padding(.trailing, 20)
+        }
+        .frame(height: 72)
+        .background(
+            Rectangle()
+                .fill(Color.black.opacity(0.55))
+                .ignoresSafeArea(edges: .bottom)
+        )
+        .accessibilityIdentifier(AX.Capture.photoVideoToggle)
+    }
+
+    private func modeTabButton(systemImage: String, label: String, mode: CaptureMode) -> some View {
+        Button { viewModel.captureMode = mode } label: {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20))
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .foregroundStyle(viewModel.captureMode == mode ? .white : .white.opacity(0.4))
+            .frame(width: 72, height: 56)
+        }
+        .disabled(viewModel.isRecording)
+    }
+
+    // MARK: - Camera flip button (bottom-right of bottom bar)
 
     private var cameraFlipButton: some View {
         Button { viewModel.toggleCamera() } label: {
             Image(systemName: "arrow.triangle.2.circlepath.camera.fill")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 20))
                 .foregroundStyle(.white)
-                .padding(10)
-                .background(.black.opacity(0.35))
+                .frame(width: 52, height: 52)
+                .background(Color.white.opacity(0.12))
                 .clipShape(Circle())
         }
         .accessibilityIdentifier(AX.Capture.cameraFlipButton)
@@ -260,52 +293,5 @@ private struct LibraryThumbnailButton: View {
         } else {
             thumbnail = UIImage(contentsOfFile: item.resolvedMediaURL.path)
         }
-    }
-}
-
-// MARK: - Camera mode picker (iOS-Camera-style horizontal scroll)
-
-private struct CameraModePicker: View {
-    @Binding var selection: CaptureMode
-    @State private var scrolledID: CaptureMode?
-
-    private let modes: [CaptureMode] = [.photo, .video]
-
-    var body: some View {
-        VStack(spacing: 6) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(modes, id: \.self) { mode in
-                        Text(mode.label)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .containerRelativeFrame(.horizontal)
-                            .id(mode)
-                            .scrollTransition(.animated) { content, phase in
-                                content.opacity(phase.isIdentity ? 1.0 : 0.35)
-                            }
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $scrolledID)
-            .frame(height: 22)
-            .onAppear { scrolledID = selection }
-            .onChange(of: scrolledID) { _, newValue in
-                guard let mode = newValue, mode != selection else { return }
-                selection = mode
-            }
-            .onChange(of: selection) { _, newValue in
-                guard newValue != scrolledID else { return }
-                scrolledID = newValue
-            }
-
-            // Fixed center indicator dot
-            Circle()
-                .fill(.white)
-                .frame(width: 4, height: 4)
-        }
-        .accessibilityIdentifier(AX.Capture.photoVideoToggle)
     }
 }
