@@ -63,21 +63,18 @@ struct CaptureView: View {
                 .ignoresSafeArea()
                 .accessibilityIdentifier(AX.Capture.cameraPreview)
 
-            // White flash on photo capture
             Color.white
                 .opacity(viewModel.captureFlash ? 1 : 0)
                 .animation(.easeOut(duration: 0.15), value: viewModel.captureFlash)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            // Recording indicator — top center
             if viewModel.isRecording {
                 recordingIndicator
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .padding(.top, 8)
             }
 
-            // Top-left: debug button (DEBUG only)
             #if DEBUG
             debugButton
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -85,41 +82,41 @@ struct CaptureView: View {
                 .padding(.leading, 16)
             #endif
 
-            // Shutter — floating above the native tab bar
+            // Shutter — floats above the tab bar
             VStack {
                 Spacer()
                 shutterControl
                     .padding(.bottom, 70)
             }
 
-            // Native tab bar for Photo / Video — real TabView, transparent content
-            TabView(selection: $viewModel.captureMode) {
-                Color.clear
-                    .allowsHitTesting(false)
-                    .tabItem { Text("Photo") }
-                    .tag(CaptureMode.photo)
-                Color.clear
-                    .allowsHitTesting(false)
-                    .tabItem { Text("Video") }
-                    .tag(CaptureMode.video)
+            // Tab bar row at extreme bottom: thumbnail | [Photo  Video] | flip
+            VStack {
+                Spacer()
+                ZStack {
+                    CaptureModeTabBar(selection: $viewModel.captureMode)
+
+                    HStack {
+                        LibraryThumbnailButton { showingLibrary = true }
+                            .padding(.leading, 20)
+                        Spacer()
+                        cameraFlipButton
+                            .padding(.trailing, 20)
+                    }
+                    .frame(height: 49)
+                }
+                .frame(height: 49)
+                .background {
+                    Rectangle()
+                        .fill(.bar)
+                        .ignoresSafeArea(edges: .bottom)
+                }
+                .accessibilityIdentifier(AX.Capture.photoVideoToggle)
             }
-            .accessibilityIdentifier(AX.Capture.photoVideoToggle)
-
-            // Thumbnail — bottom-left, sitting inside the tab bar area
-            LibraryThumbnailButton { showingLibrary = true }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                .padding(.leading, 20)
-                .padding(.bottom, 12)
-
-            // Flip — bottom-right, mirroring the thumbnail
-            cameraFlipButton
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .padding(.trailing, 20)
-                .padding(.bottom, 12)
+            .ignoresSafeArea(edges: .bottom)
         }
     }
 
-    // MARK: - Camera flip button (bottom-right, over native tab bar)
+    // MARK: - Camera flip button
 
     private var cameraFlipButton: some View {
         Button { viewModel.toggleCamera() } label: {
@@ -269,6 +266,59 @@ private struct LibraryThumbnailButton: View {
             }
         } else {
             thumbnail = UIImage(contentsOfFile: item.resolvedMediaURL.path)
+        }
+    }
+}
+
+// MARK: - Native UITabBar wrapper for Photo / Video mode selection
+
+private struct CaptureModeTabBar: UIViewRepresentable {
+    @Binding var selection: CaptureMode
+
+    func makeUIView(context: Context) -> UITabBar {
+        let bar = UITabBar()
+
+        let photo = UITabBarItem(title: "Photo", image: nil, tag: 0)
+        let video = UITabBarItem(title: "Video", image: nil, tag: 1)
+
+        // Bigger, semibold text — same weight feel as the old Capture/Library bar
+        let font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        [photo, video].forEach { item in
+            item.setTitleTextAttributes([.font: font], for: .normal)
+            item.setTitleTextAttributes([.font: font], for: .selected)
+        }
+
+        bar.items = [photo, video]
+        bar.selectedItem = selection == .photo ? photo : video
+
+        // White tint throughout — active bright, inactive dimmed
+        bar.tintColor = .white
+        bar.unselectedItemTintColor = UIColor.white.withAlphaComponent(0.45)
+
+        // Transparent background — SwiftUI .bar material layer handles the visual
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        bar.standardAppearance = appearance
+        bar.scrollEdgeAppearance = appearance
+
+        bar.delegate = context.coordinator
+        return bar
+    }
+
+    func updateUIView(_ bar: UITabBar, context: Context) {
+        let targetTag = selection == .photo ? 0 : 1
+        guard bar.selectedItem?.tag != targetTag else { return }
+        bar.selectedItem = bar.items?.first { $0.tag == targetTag }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UITabBarDelegate {
+        var parent: CaptureModeTabBar
+        init(_ parent: CaptureModeTabBar) { self.parent = parent }
+
+        func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+            parent.selection = item.tag == 0 ? .photo : .video
         }
     }
 }
