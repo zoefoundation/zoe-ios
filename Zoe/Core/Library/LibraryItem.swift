@@ -31,4 +31,12 @@ final class LibraryItem {
         self.verdictSigningTime = verdictSigningTime
         self.kid = kid
     }
+
+    /// Always resolves to the correct sandbox path regardless of app container UUID changes.
+    /// Stored `mediaURL` may contain a stale container path after reinstall; this property
+    /// reconstructs the URL from the current Documents directory using only the filename.
+    var resolvedMediaURL: URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return docs.appendingPathComponent("ZoeMedia").appendingPathComponent(mediaURL.lastPathComponent)
+    }
 }

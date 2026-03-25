@@ -177,14 +177,14 @@ private struct LibraryCell: View {
 
     private func loadThumbnail() async {
         if item.mediaType == "video" {
-            let asset = AVURLAsset(url: item.mediaURL)
+            let asset = AVURLAsset(url: item.resolvedMediaURL)
             let gen = AVAssetImageGenerator(asset: asset)
             gen.appliesPreferredTrackTransform = true
             if let (cgImage, _) = try? await gen.image(at: .zero) {
                 thumbnail = UIImage(cgImage: cgImage)
             }
         } else {
-            let path = item.mediaURL.path
+            let path = item.resolvedMediaURL.path
             thumbnail = UIImage(contentsOfFile: path)
         }
     }

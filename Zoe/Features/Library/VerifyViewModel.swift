@@ -15,7 +15,7 @@ final class VerifyViewModel: ObservableObject {
         item.verificationState = VerificationState.verifying.rawValue
         try? store.modelContext.save()
 
-        let fileURL = item.mediaURL
+        let fileURL = item.resolvedMediaURL
         Task {
             let verdict = await verificationService.verify(fileURL: fileURL)
             await MainActor.run {
