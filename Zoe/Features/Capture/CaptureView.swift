@@ -88,7 +88,7 @@ struct CaptureView: View {
                 .padding(.top, 16)
                 .padding(.trailing, 16)
 
-            // Bottom: thumbnail + shutter + photo/video toggle
+            // Bottom: thumbnail + shutter + scrollable mode picker
             VStack(spacing: 0) {
                 Spacer()
                 HStack(alignment: .center) {
@@ -99,11 +99,12 @@ struct CaptureView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 16)
-                photoVideoToggle
-                    .padding(.bottom, 32)
+                .padding(.bottom, 20)
+                CameraModePicker(selection: $viewModel.captureMode)
+                    .padding(.bottom, 8)
             }
         }
+        .sensoryFeedback(.selection, trigger: viewModel.captureMode)
     }
 
     // MARK: - Camera flip button (top-right)
@@ -135,31 +136,6 @@ struct CaptureView: View {
         .accessibilityIdentifier(AX.Debug.openButton)
     }
     #endif
-
-    // MARK: - Photo/Video mode toggle (bottom)
-
-    private var photoVideoToggle: some View {
-        HStack(spacing: 0) {
-            modeToggleButton(title: "PHOTO", mode: .photo)
-            modeToggleButton(title: "VIDEO", mode: .video)
-        }
-        .padding(3)
-        .background(.black.opacity(0.35))
-        .clipShape(Capsule())
-        .accessibilityIdentifier(AX.Capture.photoVideoToggle)
-    }
-
-    private func modeToggleButton(title: String, mode: CaptureMode) -> some View {
-        Button { viewModel.captureMode = mode } label: {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(viewModel.captureMode == mode ? .black : .white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
-                .background(viewModel.captureMode == mode ? .white : .clear)
-                .clipShape(Capsule())
-        }
-    }
 
     // MARK: - Recording indicator (red dot + timer, top-center)
 
@@ -258,16 +234,15 @@ private struct LibraryThumbnailButton: View {
                     Image(uiImage: img)
                         .resizable()
                         .scaledToFill()
+                        .frame(width: 52, height: 52)
+                        .clipShape(Circle())
                 } else {
-                    Image(systemName: "photo.stack")
-                        .foregroundStyle(.white)
-                        .font(.system(size: 22))
+                    Circle()
+                        .fill(Color(.systemGray3))
+                        .frame(width: 52, height: 52)
                 }
             }
-            .frame(width: 52, height: 52)
-            .background(Color.black.opacity(0.35))
-            .clipShape(Circle())
-            .overlay(Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1.5))
+            .overlay(Circle().strokeBorder(.white.opacity(0.4), lineWidth: 1.5))
         }
         .accessibilityIdentifier(AX.Capture.libraryThumbnailButton)
         .task(id: items.first?.id) { await loadThumbnail() }
@@ -285,5 +260,52 @@ private struct LibraryThumbnailButton: View {
         } else {
             thumbnail = UIImage(contentsOfFile: item.resolvedMediaURL.path)
         }
+    }
+}
+
+// MARK: - Camera mode picker (iOS-Camera-style horizontal scroll)
+
+private struct CameraModePicker: View {
+    @Binding var selection: CaptureMode
+    @State private var scrolledID: CaptureMode?
+
+    private let modes: [CaptureMode] = [.photo, .video]
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(modes, id: \.self) { mode in
+                        Text(mode.label)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .containerRelativeFrame(.horizontal)
+                            .id(mode)
+                            .scrollTransition(.animated) { content, phase in
+                                content.opacity(phase.isIdentity ? 1.0 : 0.35)
+                            }
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $scrolledID)
+            .frame(height: 22)
+            .onAppear { scrolledID = selection }
+            .onChange(of: scrolledID) { _, newValue in
+                guard let mode = newValue, mode != selection else { return }
+                selection = mode
+            }
+            .onChange(of: selection) { _, newValue in
+                guard newValue != scrolledID else { return }
+                scrolledID = newValue
+            }
+
+            // Fixed center indicator dot
+            Circle()
+                .fill(.white)
+                .frame(width: 4, height: 4)
+        }
+        .accessibilityIdentifier(AX.Capture.photoVideoToggle)
     }
 }
