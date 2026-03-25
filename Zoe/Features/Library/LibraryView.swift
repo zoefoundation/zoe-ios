@@ -114,14 +114,21 @@ private struct LibraryViewContent: View {
         .accessibilityIdentifier(AX.Library.emptyState)
     }
 
+    private let gridColumns = [
+        GridItem(.flexible(), spacing: 1.5),
+        GridItem(.flexible(), spacing: 1.5),
+        GridItem(.flexible(), spacing: 1.5),
+    ]
+
     private func scrollGrid(items: [LibraryItem]) -> some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 0) {
+            LazyVGrid(columns: gridColumns, spacing: 1.5) {
                 ForEach(items) { item in
                     LibraryCell(item: item)
                 }
             }
         }
+        .ignoresSafeArea(edges: .horizontal)
         .accessibilityIdentifier(AX.Library.gridView)
     }
 }
