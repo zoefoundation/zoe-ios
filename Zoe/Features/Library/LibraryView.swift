@@ -2,90 +2,86 @@ import AVFoundation
 import SwiftData
 import SwiftUI
 
+// Public container: reads @Environment and bootstraps the StateObject
 struct LibraryView: View {
-    @Query(sort: \LibraryItem.capturedAt, order: .reverse) private var items: [LibraryItem]
     @Environment(\.modelContext) private var modelContext
-    @State private var viewModel: LibraryViewModel?
+
+    var body: some View {
+        LibraryViewContent(modelContext: modelContext)
+    }
+}
+
+// MARK: - Content (owns the ViewModel as @StateObject)
+
+private struct LibraryViewContent: View {
+    @StateObject private var viewModel: LibraryViewModel
+    @Query(sort: \LibraryItem.capturedAt, order: .reverse) private var items: [LibraryItem]
+
+    init(modelContext: ModelContext) {
+        let store = LibraryStore(modelContext: modelContext)
+        let verifyVM = VerifyViewModel(store: store)
+        _viewModel = StateObject(wrappedValue: LibraryViewModel(store: store, verifyViewModel: verifyVM))
+    }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if let vm = viewModel {
-                    content(vm: vm)
-                } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+            VStack(spacing: 0) {
+                filterChipsRow
+                contentBody
             }
             .navigationTitle("Library")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if let vm = viewModel {
-                        Button {
-                            vm.importTapped()
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .accessibilityIdentifier(AX.Library.importButton)
+                    Button {
+                        viewModel.importTapped()
+                    } label: {
+                        Image(systemName: "plus")
                     }
+                    .accessibilityIdentifier(AX.Library.importButton)
                 }
             }
         }
         .accessibilityIdentifier(AX.Library.screenView)
-        .onAppear {
-            if viewModel == nil {
-                let store = LibraryStore(modelContext: modelContext)
-                let verifyVM = VerifyViewModel(store: store)
-                viewModel = LibraryViewModel(store: store, verifyViewModel: verifyVM)
-            }
-        }
         .onOpenURL { url in
             url.startAccessingSecurityScopedResource()
             defer { url.stopAccessingSecurityScopedResource() }
-            Task { await viewModel?.handleIncomingURL(url) }
+            Task { await viewModel.handleIncomingURL(url) }
         }
-        .sheet(isPresented: Binding(
-            get: { viewModel?.showingPicker ?? false },
-            set: { viewModel?.showingPicker = $0 }
-        )) {
-            if let vm = viewModel {
-                PHPickerRepresentable { results in
-                    Task { await vm.handlePickerResult(results) }
-                }
-                .ignoresSafeArea()
+        .sheet(isPresented: $viewModel.showingPicker) {
+            PHPickerRepresentable { results in
+                Task { await viewModel.handlePickerResult(results) }
             }
+            .ignoresSafeArea()
         }
     }
 
     @ViewBuilder
-    private func content(vm: LibraryViewModel) -> some View {
-        let filtered = vm.filteredItems(from: items)
-        VStack(spacing: 0) {
-            filterChipsRow(vm: vm)
-            if filtered.isEmpty {
-                emptyState
-            } else {
-                scrollGrid(items: filtered)
-            }
+    private var contentBody: some View {
+        let filtered = viewModel.filteredItems(from: items)
+        if filtered.isEmpty {
+            emptyState
+        } else {
+            scrollGrid(items: filtered)
         }
     }
 
-    private func filterChipsRow(vm: LibraryViewModel) -> some View {
+    private var filterChipsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                filterChip(.all, vm: vm)
-                filterChip(.captured, vm: vm)
-                filterChip(.imported, vm: vm)
+                filterChip(.all)
+                filterChip(.captured)
+                filterChip(.imported)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
         }
+        .padding(.bottom, 8)
     }
 
-    private func filterChip(_ filter: LibraryFilter, vm: LibraryViewModel) -> some View {
-        let isActive = vm.selectedFilter == filter
+    private func filterChip(_ filter: LibraryFilter) -> some View {
+        let isActive = viewModel.selectedFilter == filter
         return Button(filter.rawValue) {
-            vm.selectedFilter = filter
+            viewModel.selectedFilter = filter
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)

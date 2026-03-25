@@ -29,14 +29,23 @@ final class LibraryViewModel: ObservableObject {
 
     func handlePickerResult(_ results: [PHPickerResult]) async {
         guard let result = results.first else { return }
+
+        // Dedup: skip if this asset is already in the library
+        if let assetId = result.assetIdentifier {
+            let key = "asset:\(assetId)"
+            let existing = (try? store.modelContext.fetch(FetchDescriptor<LibraryItem>()))?.first(where: { $0.kid == key })
+            if existing != nil { return }
+        }
+
         let provider = result.itemProvider
+        let assetKey = result.assetIdentifier.map { "asset:\($0)" }
         let imageType = UTType.image.identifier
         let movieType = UTType.movie.identifier
 
         if provider.hasItemConformingToTypeIdentifier(imageType) {
-            await loadAndInsert(provider: provider, typeIdentifier: imageType, mediaType: "photo")
+            await loadAndInsert(provider: provider, typeIdentifier: imageType, mediaType: "photo", assetKey: assetKey)
         } else if provider.hasItemConformingToTypeIdentifier(movieType) {
-            await loadAndInsert(provider: provider, typeIdentifier: movieType, mediaType: "video")
+            await loadAndInsert(provider: provider, typeIdentifier: movieType, mediaType: "video", assetKey: assetKey)
         }
     }
 
@@ -63,7 +72,7 @@ final class LibraryViewModel: ObservableObject {
 
     // MARK: Private
 
-    private func loadAndInsert(provider: NSItemProvider, typeIdentifier: String, mediaType: String) async {
+    private func loadAndInsert(provider: NSItemProvider, typeIdentifier: String, mediaType: String, assetKey: String?) async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             provider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { [weak self] tmpURL, error in
                 guard let self, let tmpURL, error == nil else {
@@ -82,6 +91,8 @@ final class LibraryViewModel: ObservableObject {
                         source: "imported",
                         verificationState: .verifying
                     )
+                    item.kid = assetKey
+                    try? self.store.modelContext.save()
                     self.verifyViewModel.verify(item: item)
                     continuation.resume()
                 }
