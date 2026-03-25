@@ -140,35 +140,25 @@ private struct LibraryCell: View {
     @State private var thumbnail: UIImage?
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            thumbnailContent
-            provenanceDotView
-                .padding(5)
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .clipped()
-        .accessibilityLabel(cellAccessibilityLabel)
-        .accessibilityIdentifier(AX.Library.cell(item.id))
-        .task(id: item.id) { await loadThumbnail() }
-    }
-
-    private var thumbnailContent: some View {
-        Group {
-            if let img = thumbnail {
-                Image(uiImage: img)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Color(.systemGray6)
-                    .overlay {
-                        if item.mediaType == "video" {
-                            Image(systemName: "play.fill")
-                                .foregroundStyle(Color(.tertiaryLabel))
-                        }
-                    }
+        Color(.systemGray6)
+            .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                if let img = thumbnail {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                } else if item.mediaType == "video" {
+                    Image(systemName: "play.fill")
+                        .foregroundStyle(Color(.tertiaryLabel))
+                }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+            .overlay(alignment: .bottomTrailing) {
+                provenanceDotView.padding(5)
+            }
+            .accessibilityLabel(cellAccessibilityLabel)
+            .accessibilityIdentifier(AX.Library.cell(item.id))
+            .task(id: item.id) { await loadThumbnail() }
     }
 
     private var provenanceDotView: some View {
