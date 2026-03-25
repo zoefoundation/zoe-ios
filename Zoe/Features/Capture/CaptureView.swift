@@ -106,11 +106,6 @@ struct CaptureView: View {
                 }
                 .frame(height: 49)
                 .padding(.bottom, 20)
-                .background {
-                    Rectangle()
-                        .fill(.bar)
-                        .ignoresSafeArea(edges: .bottom)
-                }
                 .accessibilityIdentifier(AX.Capture.photoVideoToggle)
             }
             .ignoresSafeArea(edges: .bottom)
@@ -302,11 +297,15 @@ private struct CaptureModeTabBar: UIViewRepresentable {
         bar.tintColor = .white
         bar.unselectedItemTintColor = UIColor.white.withAlphaComponent(0.45)
 
-        // Transparent background — SwiftUI .bar material layer handles the visual
+        // Fully transparent — no background at all
         let appearance = UITabBarAppearance()
         appearance.configureWithTransparentBackground()
+        appearance.backgroundEffect = nil
+        appearance.backgroundColor = .clear
+        appearance.shadowColor = .clear
         bar.standardAppearance = appearance
         bar.scrollEdgeAppearance = appearance
+        bar.isTranslucent = true
 
         bar.delegate = context.coordinator
         return bar
