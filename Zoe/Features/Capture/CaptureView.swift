@@ -89,7 +89,7 @@ struct CaptureView: View {
             VStack {
                 Spacer()
                 shutterControl
-                    .padding(.bottom, 96)
+                    .padding(.bottom, 72)
             }
 
             // Bottom bar — tab-bar style, pinned to extreme bottom
@@ -100,42 +100,34 @@ struct CaptureView: View {
         }
     }
 
-    // MARK: - Bottom bar (tab-bar style: thumbnail | PHOTO  VIDEO | flip)
+    // MARK: - Bottom bar (native tab-bar style: thumbnail | Photo  Video | flip)
 
     private var captureBottomBar: some View {
         HStack(spacing: 0) {
             LibraryThumbnailButton { showingLibrary = true }
                 .padding(.leading, 20)
 
-            Spacer()
-
-            modeTabButton(systemImage: "camera.fill", label: "PHOTO", mode: .photo)
-            modeTabButton(systemImage: "video.fill", label: "VIDEO", mode: .video)
-
-            Spacer()
+            modeTabButton(label: "Photo", mode: .photo)
+            modeTabButton(label: "Video", mode: .video)
 
             cameraFlipButton
                 .padding(.trailing, 20)
         }
-        .frame(height: 72)
+        .frame(height: 49)
         .background(
             Rectangle()
-                .fill(Color.black.opacity(0.55))
+                .fill(.bar)
                 .ignoresSafeArea(edges: .bottom)
         )
         .accessibilityIdentifier(AX.Capture.photoVideoToggle)
     }
 
-    private func modeTabButton(systemImage: String, label: String, mode: CaptureMode) -> some View {
+    private func modeTabButton(label: String, mode: CaptureMode) -> some View {
         Button { viewModel.captureMode = mode } label: {
-            VStack(spacing: 4) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 20))
-                Text(label)
-                    .font(.system(size: 10, weight: .medium))
-            }
-            .foregroundStyle(viewModel.captureMode == mode ? .white : .white.opacity(0.4))
-            .frame(width: 72, height: 56)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(viewModel.captureMode == mode ? Color.accentColor : Color.secondary)
+                .frame(maxWidth: .infinity, minHeight: 49)
         }
         .disabled(viewModel.isRecording)
     }
