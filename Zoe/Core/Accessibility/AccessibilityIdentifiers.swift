@@ -1,3 +1,5 @@
+import Foundation
+
 // Canonical accessibility identifier constants.
 // All identifiers follow [screen].[element].[role] naming convention.
 // See docs/accessibility-identifiers.md for full spec.

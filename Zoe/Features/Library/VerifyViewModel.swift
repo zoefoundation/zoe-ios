@@ -1,4 +1,5 @@
 import Combine
+import SwiftData
 
 @MainActor
 final class VerifyViewModel: ObservableObject {
@@ -14,10 +15,13 @@ final class VerifyViewModel: ObservableObject {
         item.verificationState = VerificationState.verifying.rawValue
         try? store.modelContext.save()
 
+        let fileURL = item.mediaURL
         Task {
-            let verdict = await verificationService.verify(item: item)
-            item.verificationState = verdict.rawValue
-            try? store.modelContext.save()
+            let verdict = await verificationService.verify(fileURL: fileURL)
+            await MainActor.run {
+                item.verificationState = verdict.rawValue
+                try? store.modelContext.save()
+            }
         }
     }
 }
