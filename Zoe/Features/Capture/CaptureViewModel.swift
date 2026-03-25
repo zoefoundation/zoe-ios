@@ -40,6 +40,7 @@ final class CaptureViewModel: NSObject, ObservableObject {
         if let km = keyManager {
             await signingPipeline.setKeyManager(km)
         }
+        await signingPipeline.setAPIClient(APIClient.shared)
         if let store = libraryStore { self.libraryStore = store }
 
         let videoGranted = await AVCaptureDevice.requestAccess(for: .video)

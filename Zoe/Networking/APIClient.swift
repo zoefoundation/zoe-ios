@@ -1,5 +1,23 @@
 import Foundation
 
+// MARK: - Proof Types
+
+struct ProofBundleRequest: Encodable {
+    let payload: [String: String]   // zoe.media.v1 canonical fields dict
+    let signatureB64: String        // ECDSA P-256 DER representation, base64-encoded
+    let algorithm: String           // "ES256"
+}
+
+struct ProofUploadResponse: Decodable {
+    let proofId: String             // Server-generated UUID
+}
+
+// MARK: - SigningAPIClient Protocol
+
+protocol SigningAPIClient: Sendable {
+    func uploadProof(_ bundle: ProofBundleRequest) async throws -> ProofUploadResponse
+}
+
 // MARK: - CertificatePinningDelegate
 
 final class CertificatePinningDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
@@ -98,6 +116,17 @@ final class APIClient: Sendable {
 
         let (data, response) = try await performRequest(request)
         return try decode(RegisterResponse.self, from: data, response: response)
+    }
+
+    // MARK: - uploadProof(_:)
+
+    func uploadProof(_ bundle: ProofBundleRequest) async throws -> ProofUploadResponse {
+        var request = URLRequest(url: endpointURL(for: APIEndpoints.proofsPath))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try makeJSONEncoder().encode(bundle)
+        let (data, response) = try await performRequest(request)
+        return try decode(ProofUploadResponse.self, from: data, response: response)
     }
 
     // MARK: - Helpers

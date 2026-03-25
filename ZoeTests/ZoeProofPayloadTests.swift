@@ -3,10 +3,10 @@ import CryptoKit
 import Foundation
 @testable import zoe
 
-final class C2PAManifestTests {
+final class ZoeProofPayloadTests {
 
-    private func makeManifest() -> C2PAManifest {
-        C2PAManifest(
+    private func makeManifest() -> ZoeProofPayload {
+        ZoeProofPayload(
             schemaVersion: "zoe.media.v1",
             kid: "abc123",
             contentHash: "deadbeef",
@@ -18,27 +18,6 @@ final class C2PAManifestTests {
         )
     }
 
-    // MARK: - 8.1
-
-    @Test("All 8 zoe.media.v1 fields present in c2paManifestJSON assertions data")
-    func testAllFieldsPresent() throws {
-        let json = try makeManifest().c2paManifestJSON()
-        let parsed = try JSONSerialization.jsonObject(with: Data(json.utf8)) as! [String: Any]
-        let assertions = parsed["assertions"] as! [[String: Any]]
-        let data = assertions[0]["data"] as! [String: Any]
-
-        #expect(data["schema_version"] != nil)
-        #expect(data["kid"] != nil)
-        #expect(data["content_hash"] != nil)
-        #expect(data["asset_id"] != nil)
-        #expect(data["capture_timestamp"] != nil)
-        #expect(data["app_version"] != nil)
-        #expect(data["ios_version"] != nil)
-        #expect(data["device_model"] != nil)
-    }
-
-    // MARK: - 8.2
-
     @Test("canonicalJSON excludes signature field and contains exactly 8 keys")
     func testCanonicalJSONExcludesSignatureField() throws {
         let canonical = try makeManifest().canonicalJSON()
@@ -49,8 +28,6 @@ final class C2PAManifestTests {
         let dict = try JSONSerialization.jsonObject(with: canonical) as! [String: Any]
         #expect(dict.count == 8)
     }
-
-    // MARK: - 8.3
 
     @Test("canonicalJSON keys are in alphabetical order")
     func testCanonicalJSONAlphabeticKeyOrder() throws {
@@ -69,8 +46,6 @@ final class C2PAManifestTests {
         }
     }
 
-    // MARK: - 8.4
-
     @Test("canonicalJSON has no whitespace after colons or commas")
     func testCanonicalJSONNoWhitespace() throws {
         let canonical = try makeManifest().canonicalJSON()
@@ -80,8 +55,6 @@ final class C2PAManifestTests {
         #expect(!str.contains(", "))
     }
 
-    // MARK: - 8.5
-
     @Test("deriveKid returns 64-char lowercase hex")
     func testKidIs64CharLowercaseHex() throws {
         let softKey = P256.Signing.PrivateKey()
@@ -90,8 +63,6 @@ final class C2PAManifestTests {
         #expect(kid.count == 64)
         #expect(kid.range(of: "^[0-9a-f]+$", options: .regularExpression) != nil)
     }
-
-    // MARK: - 8.6
 
     @Test("SHA-256 content hash is 64-char lowercase hex")
     func testContentHashFormat() throws {
@@ -103,8 +74,6 @@ final class C2PAManifestTests {
         #expect(hash.range(of: "^[0-9a-f]+$", options: .regularExpression) != nil)
     }
 
-    // MARK: - 8.7
-
     @Test("UUID v4 asset ID has correct format")
     func testAssetIdIsUUIDv4Format() throws {
         let assetId = UUID().uuidString
@@ -112,5 +81,15 @@ final class C2PAManifestTests {
         #expect(UUID(uuidString: assetId) != nil)
         #expect(assetId.count == 36)
     }
-}
 
+    @Test("toDict() returns same 8 keys as canonicalJSON")
+    func testToDictMatchesCanonicalJSONKeys() throws {
+        let payload = makeManifest()
+        let canonical = try payload.canonicalJSON()
+        let canonicalDict = try JSONSerialization.jsonObject(with: canonical) as! [String: Any]
+        let toDict = payload.toDict()
+
+        #expect(Set(canonicalDict.keys) == Set(toDict.keys))
+        #expect(toDict.count == 8)
+    }
+}

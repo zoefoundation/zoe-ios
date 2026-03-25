@@ -1,5 +1,4 @@
 import Combine
-import C2PA
 import CryptoKit
 import Darwin
 import Foundation
@@ -27,6 +26,7 @@ protocol KeyManagerNetworking: Sendable {
 }
 
 extension APIClient: KeyManagerNetworking {}
+extension APIClient: SigningAPIClient {}
 
 // MARK: - KeyManager
 
@@ -191,30 +191,6 @@ final class KeyManager: ObservableObject {
         }
         let sePrivKey = try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: kp.dataRep)
         return try sePrivKey.signature(for: data)
-    }
-
-    /// Creates a c2pa-ios `Signer` that uses the SE private key via a synchronous signing closure.
-    ///
-    /// `KeyManager` is the only component that reconstructs the SE key from its stored dataRepresentation.
-    /// The closure is synchronous because `SecureEnclave.P256.Signing.PrivateKey.signature(for:)` is
-    /// synchronous at the CryptoKit level — the actor wrapper in `sign(data:)` is removed here
-    /// specifically to satisfy c2pa-ios's synchronous signing closure contract.
-    ///
-    /// - Parameter certsPEM: PEM certificate chain for the C2PA claim (use `C2PATestCredentials.certsPEM`
-    ///   for MVP; replace with a real cert chain certified against the SE public key in production).
-    func makeC2PASigner(certsPEM: String) throws -> sending Signer {
-        let kp: (dataRep: Data, publicKey: P256.Signing.PublicKey)
-        if let existing = seKey {
-            kp = existing
-        } else {
-            kp = try generateOrLoadSEKey()
-            seKey = kp
-        }
-        let dataRep = kp.dataRep
-        return try Signer(algorithm: .es256, certificateChainPEM: certsPEM, tsaURL: nil) { @Sendable data in
-            let sePrivKey = try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: dataRep)
-            return try sePrivKey.signature(for: data).derRepresentation
-        }
     }
 
     // MARK: - Logging Helper
