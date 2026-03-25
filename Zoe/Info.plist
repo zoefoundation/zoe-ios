@@ -10,6 +10,31 @@
 	<string>Zoe uses the microphone to record audio during video capture.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Zoe saves signed media to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Zoe imports photos and videos to verify their provenance.</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Image</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.image</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Movie</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.movie</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
