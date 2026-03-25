@@ -137,25 +137,24 @@ struct CaptureView: View {
                             .strokeBorder(.white.opacity(0.4), lineWidth: 3)
                             .frame(width: 80, height: 80)
                     )
+                    .scaleEffect(viewModel.captureFlash ? 1.15 : 1.0)
+                    .animation(.easeInOut(duration: 0.1), value: viewModel.captureFlash)
                     .onTapGesture { viewModel.capturePhoto() }
                     .onLongPressGesture(minimumDuration: 0.5) { viewModel.startRecording() }
                     #if DEBUG
-                    .contextMenu {
-                        Button {
-                            showingDebugView = true
-                        } label: {
-                            Label("Registration Diagnostics", systemImage: "wifi.exclamationmark")
-                        }
-                    }
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 2.0)
+                            .onEnded { _ in showingDebugView = true }
+                    )
                     #endif
             } else {
-                // Video mode shutter — white circle with red ring
+                // Video mode shutter — red circle with white ring (like iOS camera)
                 Circle()
-                    .fill(.white)
+                    .fill(.red)
                     .frame(width: 72, height: 72)
                     .overlay(
                         Circle()
-                            .strokeBorder(.red.opacity(0.85), lineWidth: 3)
+                            .strokeBorder(.white.opacity(0.4), lineWidth: 3)
                             .frame(width: 80, height: 80)
                     )
                     .onTapGesture { viewModel.startRecording() }
