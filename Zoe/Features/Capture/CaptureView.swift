@@ -85,63 +85,48 @@ struct CaptureView: View {
                 .padding(.leading, 16)
             #endif
 
-            // Shutter — floating above the bottom bar
+            // Shutter — floating above the native tab bar
             VStack {
                 Spacer()
                 shutterControl
-                    .padding(.bottom, 72)
+                    .padding(.bottom, 70)
             }
 
-            // Bottom bar — tab-bar style, pinned to extreme bottom
-            VStack {
-                Spacer()
-                captureBottomBar
+            // Native tab bar for Photo / Video — real TabView, transparent content
+            TabView(selection: $viewModel.captureMode) {
+                Color.clear
+                    .allowsHitTesting(false)
+                    .tabItem { Text("Photo") }
+                    .tag(CaptureMode.photo)
+                Color.clear
+                    .allowsHitTesting(false)
+                    .tabItem { Text("Video") }
+                    .tag(CaptureMode.video)
             }
-        }
-    }
+            .accessibilityIdentifier(AX.Capture.photoVideoToggle)
 
-    // MARK: - Bottom bar (native tab-bar style: thumbnail | Photo  Video | flip)
-
-    private var captureBottomBar: some View {
-        HStack(spacing: 0) {
+            // Thumbnail — bottom-left, sitting inside the tab bar area
             LibraryThumbnailButton { showingLibrary = true }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .padding(.leading, 20)
+                .padding(.bottom, 12)
 
-            modeTabButton(label: "Photo", mode: .photo)
-            modeTabButton(label: "Video", mode: .video)
-
+            // Flip — bottom-right, mirroring the thumbnail
             cameraFlipButton
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .padding(.trailing, 20)
+                .padding(.bottom, 12)
         }
-        .frame(height: 49)
-        .background(
-            Rectangle()
-                .fill(.bar)
-                .ignoresSafeArea(edges: .bottom)
-        )
-        .accessibilityIdentifier(AX.Capture.photoVideoToggle)
     }
 
-    private func modeTabButton(label: String, mode: CaptureMode) -> some View {
-        Button { viewModel.captureMode = mode } label: {
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(viewModel.captureMode == mode ? Color.accentColor : Color.secondary)
-                .frame(maxWidth: .infinity, minHeight: 49)
-        }
-        .disabled(viewModel.isRecording)
-    }
-
-    // MARK: - Camera flip button (bottom-right of bottom bar)
+    // MARK: - Camera flip button (bottom-right, over native tab bar)
 
     private var cameraFlipButton: some View {
         Button { viewModel.toggleCamera() } label: {
             Image(systemName: "arrow.triangle.2.circlepath.camera.fill")
-                .font(.system(size: 20))
-                .foregroundStyle(.white)
-                .frame(width: 52, height: 52)
-                .background(Color.white.opacity(0.12))
-                .clipShape(Circle())
+                .font(.system(size: 22))
+                .foregroundStyle(.primary)
+                .frame(width: 44, height: 44)
         }
         .accessibilityIdentifier(AX.Capture.cameraFlipButton)
     }
