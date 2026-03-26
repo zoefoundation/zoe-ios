@@ -14,6 +14,7 @@ enum APIEndpoints {
     static let challengePath = "/v1/challenge"
     static let registerPath = "/v1/keys/register"
     static let proofsPath = "/api/v1/proofs"
+    static let verifyPath = "/v1/verify"
 
     static func url(for path: String) -> URL {
         baseURL.appendingPathComponent(path)

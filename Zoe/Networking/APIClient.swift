@@ -129,6 +129,28 @@ final class APIClient: Sendable {
         return try decode(ProofUploadResponse.self, from: data, response: response)
     }
 
+    // MARK: - lookupProof(assetSHA256:)
+
+    func lookupProof(assetSHA256: String) async throws -> ProofLookupResponse? {
+        var components = URLComponents(url: endpointURL(for: APIEndpoints.proofsPath), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "asset_sha256", value: assetSHA256)]
+        let request = URLRequest(url: components.url!)
+        let (data, response) = try await performRequest(request)
+        if response.statusCode == 404 { return nil }
+        return try decode(ProofLookupResponse.self, from: data, response: response)
+    }
+
+    // MARK: - postVerify(_:)
+
+    func postVerify(_ request: VerifyRequest) async throws -> VerifyResponse {
+        var urlRequest = URLRequest(url: endpointURL(for: APIEndpoints.verifyPath))
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = try makeJSONEncoder().encode(request)
+        let (data, response) = try await performRequest(urlRequest)
+        return try decode(VerifyResponse.self, from: data, response: response)
+    }
+
     // MARK: - Helpers
 
     private func performRequest(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {

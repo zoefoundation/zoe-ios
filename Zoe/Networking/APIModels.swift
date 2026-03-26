@@ -39,6 +39,37 @@ struct APIErrorEnvelope: Codable {
     let error: APIErrorDetail
 }
 
+// MARK: - Verification Types
+
+struct ProofLookupResponse: Decodable, Sendable {
+    let proofId: String
+    let kid: String
+    let payload: [String: String]
+    let signatureB64: String
+    let algorithm: String
+    let createdAt: String
+}
+
+struct VerifyRequest: Encodable, Sendable {
+    let proofId: String
+    let contentHashHex: String
+}
+
+struct VerifyResponse: Decodable, Sendable {
+    let verdict: String
+    let signingTime: String?
+    let kid: String?
+}
+
+// MARK: - VerifyAPIClient Protocol
+
+protocol VerifyAPIClient: Sendable {
+    func lookupProof(assetSHA256: String) async throws -> ProofLookupResponse?
+    func postVerify(_ request: VerifyRequest) async throws -> VerifyResponse
+}
+
+extension APIClient: VerifyAPIClient {}
+
 // MARK: - APIError
 
 enum APIError: Error {
