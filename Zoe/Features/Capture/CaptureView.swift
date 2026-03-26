@@ -8,6 +8,7 @@ struct CaptureView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.modelContext) private var modelContext
     @State private var showingLibrary = false
+    @State private var buttonAnchor: UnitPoint = UnitPoint(x: 0.11, y: 0.94)
     #if DEBUG
     @State private var showingDebugView = false
     #endif
@@ -26,7 +27,10 @@ struct CaptureView: View {
                 LibraryView()
                     .ignoresSafeArea()
                     .zIndex(1)
-                    .transition(.move(edge: .bottom))
+                    .transition(
+                        .scale(scale: 0.001, anchor: buttonAnchor)
+                        .combined(with: .opacity)
+                    )
             }
 
             if viewModel.permissionStatus != .denied && viewModel.permissionStatus != .restricted {
@@ -34,7 +38,14 @@ struct CaptureView: View {
                     .zIndex(2)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: showingLibrary)
+        .onPreferenceChange(LibraryButtonCenterKey.self) { globalCenter in
+            guard globalCenter != .zero else { return }
+            let screen = UIScreen.main.bounds
+            buttonAnchor = UnitPoint(
+                x: globalCenter.x / screen.width,
+                y: globalCenter.y / screen.height
+            )
+        }
         .task { await viewModel.configure(keyManager: appState.keyManager, libraryStore: LibraryStore(modelContext: modelContext)) }
         .onDisappear { viewModel.stopSession() }
         .sensoryFeedback(.selection, trigger: viewModel.captureMode)
@@ -128,7 +139,7 @@ struct CaptureView: View {
             Spacer()
             HStack {
                 LibraryThumbnailButton(isInLibrary: showingLibrary) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
+                    withAnimation(.spring(duration: 0.5, bounce: 0.12)) {
                         showingLibrary.toggle()
                     }
                 }
@@ -291,6 +302,17 @@ private struct LibraryThumbnailButton: View {
             }
             .frame(width: 44, height: 44)
         }
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: LibraryButtonCenterKey.self,
+                    value: CGPoint(
+                        x: geo.frame(in: .global).midX,
+                        y: geo.frame(in: .global).midY
+                    )
+                )
+            }
+        )
         .accessibilityIdentifier(AX.Capture.libraryThumbnailButton)
         .task(id: items.first?.id) { await loadThumbnail() }
     }
@@ -307,6 +329,15 @@ private struct LibraryThumbnailButton: View {
         } else {
             thumbnail = UIImage(contentsOfFile: item.resolvedMediaURL.path)
         }
+    }
+}
+
+// MARK: - Preference key: button global center for zoom-origin transition
+
+private struct LibraryButtonCenterKey: PreferenceKey {
+    static let defaultValue: CGPoint = .zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
+        value = nextValue()
     }
 }
 
