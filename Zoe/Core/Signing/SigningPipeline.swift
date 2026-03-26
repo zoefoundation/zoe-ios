@@ -83,18 +83,25 @@ actor SigningPipeline {
                 signatureB64: signatureB64,
                 algorithm: "ES256"
             )
-            if let client = apiClient {
-                _ = try await client.uploadProof(bundle)
-            }
 
-            // 7. Save ORIGINAL file (no embedding) to sandbox and Photos
+            // 7. Save ORIGINAL file to sandbox and Photos (before upload attempt)
             let sandboxURL = saveToSandbox(url: fileURL)
             await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
             try? FileManager.default.removeItem(at: fileURL)
+
+            if let client = apiClient {
+                do {
+                    _ = try await client.uploadProof(bundle)
+                    return sandboxURL.map { SigningOutcome(sandboxURL: $0, verificationState: .signed) }
+                } catch {
+                    // Upload failed (e.g. offline) — file is signed locally, proof upload is pending
+                    return sandboxURL.map { SigningOutcome(sandboxURL: $0, verificationState: .pending) }
+                }
+            }
             return sandboxURL.map { SigningOutcome(sandboxURL: $0, verificationState: .signed) }
 
         } catch {
-            // SILENT ERROR ABSORPTION: signing or upload failed — save unsigned original (NFR13)
+            // Signing itself failed (SE unavailable, key revoked, etc.) — save unsigned original (NFR13)
             let sandboxURL = saveToSandbox(url: fileURL)
             await saveToPhotoLibrary(url: fileURL, isVideo: fileURL.isVideoFile)
             try? FileManager.default.removeItem(at: fileURL)

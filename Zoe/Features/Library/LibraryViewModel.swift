@@ -17,10 +17,17 @@ final class LibraryViewModel: ObservableObject {
 
     private let store: LibraryStore
     private let verifyViewModel: VerifyViewModel
+    private let signingPipeline: SigningPipeline
 
-    init(store: LibraryStore, verifyViewModel: VerifyViewModel) {
+    init(store: LibraryStore, verifyViewModel: VerifyViewModel, signingPipeline: SigningPipeline = SigningPipeline()) {
         self.store = store
         self.verifyViewModel = verifyViewModel
+        self.signingPipeline = signingPipeline
+    }
+
+    func configure(keyManager: KeyManager) async {
+        await signingPipeline.setKeyManager(keyManager)
+        await signingPipeline.setAPIClient(APIClient.shared)
     }
 
     func importTapped() {
@@ -62,19 +69,27 @@ final class LibraryViewModel: ObservableObject {
         verifyViewModel.verify(item: item)
     }
 
-    /// Re-triggers verification for any item stuck in `.verifying`, `.signed`, or `.notVerified`.
-    /// Called on Library appear and scene-active transitions to recover from:
-    ///   - App killed while verifying (stuck .verifying)
-    ///   - Capture completed online but verify never ran (stuck .signed)
-    ///   - Previous verify failed offline (stuck .notVerified, retries when network returns)
+    /// Re-triggers signing/verification for items that need it.
+    /// - `.pending`: upload never reached server (captured offline) — re-sign + upload + verify
+    /// - `.verifying` / `.signed` / `.notVerified`: upload succeeded but verify not run or failed — re-verify
     func verifyPendingItems(from items: [LibraryItem]) {
-        let pendingStates: Set<String> = [
-            VerificationState.verifying.rawValue,
-            VerificationState.signed.rawValue,
-            VerificationState.notVerified.rawValue
-        ]
-        for item in items where pendingStates.contains(item.verificationState) {
-            verifyViewModel.verify(item: item)
+        for item in items {
+            switch VerificationState(rawValue: item.verificationState) {
+            case .pending:
+                Task {
+                    let outcome = try? await signingPipeline.sign(fileURL: item.resolvedMediaURL)
+                    guard let outcome else { return }
+                    item.verificationState = outcome.verificationState.rawValue
+                    try? store.modelContext.save()
+                    if outcome.verificationState == .signed {
+                        verifyViewModel.verify(item: item)
+                    }
+                }
+            case .verifying, .signed, .notVerified:
+                verifyViewModel.verify(item: item)
+            default:
+                break
+            }
         }
     }
 

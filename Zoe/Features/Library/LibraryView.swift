@@ -5,9 +5,10 @@ import SwiftUI
 // Public container: reads @Environment and bootstraps the StateObject
 struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        LibraryViewContent(modelContext: modelContext)
+        LibraryViewContent(modelContext: modelContext, keyManager: appState.keyManager)
     }
 }
 
@@ -19,7 +20,10 @@ private struct LibraryViewContent: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
-    init(modelContext: ModelContext) {
+    private let keyManager: KeyManager
+
+    init(modelContext: ModelContext, keyManager: KeyManager) {
+        self.keyManager = keyManager
         let store = LibraryStore(modelContext: modelContext)
         let verifyVM = VerifyViewModel(store: store)
         _viewModel = StateObject(wrappedValue: LibraryViewModel(store: store, verifyViewModel: verifyVM))
@@ -50,6 +54,7 @@ private struct LibraryViewContent: View {
             }
         }
         .accessibilityIdentifier(AX.Library.screenView)
+        .task { await viewModel.configure(keyManager: keyManager) }
         .onAppear { viewModel.verifyPendingItems(from: items) }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { viewModel.verifyPendingItems(from: items) }

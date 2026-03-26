@@ -5,6 +5,7 @@ enum VerificationState: String, CaseIterable {
     case tampered
     case notVerified
     case verifying
+    case pending    // signed locally, proof upload to server pending (e.g. captured offline)
 }
 
 extension VerificationState {
@@ -16,6 +17,7 @@ extension VerificationState {
         case .tampered:    return "Tampered — content was modified after signing"
         case .notVerified: return "Not Verified — no provenance signature found"
         case .verifying:   return "verifying provenance"
+        case .pending:     return "Pending — upload in progress"
         }
     }
 }

@@ -26,6 +26,7 @@ struct ProvenanceDot: View {
         case .unsigned:           return Color(.systemYellow)
         case .tampered:           return Color(.systemRed)
         case .notVerified:        return Color(.systemGray)
+        case .pending:            return Color(.systemOrange)
         case .verifying:          return .clear  // never reached — handled above
         }
     }
