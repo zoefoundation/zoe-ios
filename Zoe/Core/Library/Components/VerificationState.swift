@@ -12,7 +12,7 @@ extension VerificationState {
     var accessibilityLabel: String {
         switch self {
         case .signed:      return "Signed"
-        case .unsigned:    return "Unsigned"
+        case .unsigned:    return "Unsigned — signing failed at capture time"
         case .authentic:   return "Authentic"
         case .tampered:    return "Tampered — content was modified after signing"
         case .notVerified: return "Not Verified — no provenance signature found"
@@ -83,6 +83,19 @@ extension VerificationState {
         case .tampered:           return .error
         case .unsigned:           return .error
         case .pending, .notVerified, .verifying: return nil
+        }
+    }
+}
+
+extension VerificationState {
+    var dotColor: Color {
+        switch self {
+        case .signed, .authentic: return Color(.systemGreen)
+        case .unsigned:           return Color(.systemRed)
+        case .tampered:           return Color(.systemRed)
+        case .notVerified:        return Color(.systemGray)
+        case .pending:            return Color(.systemOrange)
+        case .verifying:          return .clear  // spinner handles display — colour unused
         }
     }
 }
