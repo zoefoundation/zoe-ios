@@ -50,6 +50,7 @@ enum AX {
         static let signingTime       = "verdict.signing_time.label"
         static let kidExcerpt        = "verdict.kid_excerpt.label"
         static let dismissButton     = "verdict.dismiss.button"
+        static let shareReportButton = "verdict.share_report.button"
     }
 
     #if DEBUG

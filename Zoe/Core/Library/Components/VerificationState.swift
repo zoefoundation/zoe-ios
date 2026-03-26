@@ -33,3 +33,56 @@ extension VerificationState {
         }
     }
 }
+
+import SwiftUI
+import UIKit
+
+extension VerificationState {
+    var verdictColor: Color {
+        switch self {
+        case .authentic, .signed: return Color(.systemGreen)
+        case .tampered:           return Color(.systemRed)
+        case .notVerified:        return Color(.systemGray)
+        case .unsigned:           return Color(.systemRed)
+        case .pending:            return Color(.systemOrange)
+        case .verifying:          return Color(.systemGray)
+        }
+    }
+
+    var verdictIconName: String {
+        switch self {
+        case .authentic, .signed: return "checkmark"
+        case .tampered:           return "xmark"
+        case .notVerified:        return "minus"
+        case .unsigned:           return "exclamationmark.triangle"
+        case .pending:            return "arrow.up.circle"
+        case .verifying:          return "hourglass"
+        }
+    }
+
+    var verdictDescription: String {
+        switch self {
+        case .authentic, .signed:
+            return "Signed by a genuine attested device. Unmodified since capture."
+        case .tampered:
+            return "This file has been modified since signing. Content does not match the original."
+        case .notVerified:
+            return "No Zoe signature found. This does not indicate tampering — provenance cannot be confirmed."
+        case .unsigned:
+            return "Signing failed at capture time (device key unavailable or revoked). No provenance claim available."
+        case .pending:
+            return "Signed locally — proof upload pending. Will verify automatically when connected."
+        case .verifying:
+            return "Verifying provenance…"
+        }
+    }
+
+    var verdictHapticType: UINotificationFeedbackGenerator.FeedbackType? {
+        switch self {
+        case .authentic, .signed: return .success
+        case .tampered:           return .error
+        case .unsigned:           return .error
+        case .pending, .notVerified, .verifying: return nil
+        }
+    }
+}
