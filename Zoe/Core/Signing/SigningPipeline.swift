@@ -109,6 +109,45 @@ actor SigningPipeline {
         }
     }
 
+    /// Re-signs an already-sandboxed file and retries the proof upload.
+    /// Unlike `sign()`, this does NOT copy, move, or delete any files.
+    /// Used to recover `.pending` items when network connectivity returns.
+    /// - Returns: `true` if proof was successfully uploaded, `false` otherwise.
+    func retryUpload(fileURL: URL) async -> Bool {
+        guard let km = keyManager, let client = apiClient else { return false }
+        let (isAvailable, kid) = await MainActor.run { (km.isSigningAvailable, km.kid) }
+        guard isAvailable, let kid else { return false }
+        do {
+            let fileData = try Data(contentsOf: fileURL)
+            let contentHash = SHA256.hash(data: fileData)
+                .map { String(format: "%02x", $0) }.joined()
+            let iosVersion = await UIDevice.current.systemVersion
+            let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+            let payload = ZoeProofPayload(
+                schemaVersion: "zoe.media.v1",
+                kid: kid,
+                contentHash: contentHash,
+                assetId: UUID().uuidString,
+                captureTimestamp: ISO8601DateFormatter().string(from: Date()),
+                appVersion: appVersion,
+                iosVersion: iosVersion,
+                deviceModel: deviceModelString()
+            )
+            let canonicalData = try payload.canonicalJSON()
+            let signature = try await km.sign(data: canonicalData)
+            let signatureB64 = signature.derRepresentation.base64EncodedString()
+            let bundle = ProofBundleRequest(
+                payload: payload.toDict(),
+                signatureB64: signatureB64,
+                algorithm: "ES256"
+            )
+            _ = try await client.uploadProof(bundle)
+            return true
+        } catch {
+            return false
+        }
+    }
+
     nonisolated private func saveToSandbox(url: URL) -> URL? {
         let mediaDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ZoeMedia")

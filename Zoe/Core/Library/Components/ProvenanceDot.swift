@@ -23,7 +23,7 @@ struct ProvenanceDot: View {
     private var dotColor: Color {
         switch state {
         case .signed, .authentic: return Color(.systemGreen)
-        case .unsigned:           return Color(.systemYellow)
+        case .unsigned:           return Color(.systemRed)
         case .tampered:           return Color(.systemRed)
         case .notVerified:        return Color(.systemGray)
         case .pending:            return Color(.systemOrange)

@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Network
 import PhotosUI
 import SwiftData
 import UniformTypeIdentifiers
@@ -18,6 +19,8 @@ final class LibraryViewModel: ObservableObject {
     private let store: LibraryStore
     private let verifyViewModel: VerifyViewModel
     private let signingPipeline: SigningPipeline
+    private var networkMonitor: NWPathMonitor?
+    private var cachedItems: [LibraryItem] = []
 
     init(store: LibraryStore, verifyViewModel: VerifyViewModel, signingPipeline: SigningPipeline = SigningPipeline()) {
         self.store = store
@@ -28,6 +31,12 @@ final class LibraryViewModel: ObservableObject {
     func configure(keyManager: KeyManager) async {
         await signingPipeline.setKeyManager(keyManager)
         await signingPipeline.setAPIClient(APIClient.shared)
+        startNetworkMonitoring()
+    }
+
+    /// Called by the view whenever the @Query items list changes so the monitor always has fresh data.
+    func updateCachedItems(_ items: [LibraryItem]) {
+        cachedItems = items
     }
 
     func importTapped() {
@@ -69,19 +78,19 @@ final class LibraryViewModel: ObservableObject {
         verifyViewModel.verify(item: item)
     }
 
-    /// Re-triggers signing/verification for items that need it.
-    /// - `.pending`: upload never reached server (captured offline) — re-sign + upload + verify
-    /// - `.verifying` / `.signed` / `.notVerified`: upload succeeded but verify not run or failed — re-verify
+    /// Re-triggers upload/verification for items that need it.
+    /// - `.pending`: proof upload failed (e.g. offline) — retry upload via retryUpload(), then verify
+    /// - `.verifying` / `.signed` / `.notVerified`: re-verify against server
     func verifyPendingItems(from items: [LibraryItem]) {
+        cachedItems = items
         for item in items {
             switch VerificationState(rawValue: item.verificationState) {
             case .pending:
                 Task {
-                    let outcome = try? await signingPipeline.sign(fileURL: item.resolvedMediaURL)
-                    guard let outcome else { return }
-                    item.verificationState = outcome.verificationState.rawValue
-                    try? store.modelContext.save()
-                    if outcome.verificationState == .signed {
+                    let uploaded = await signingPipeline.retryUpload(fileURL: item.resolvedMediaURL)
+                    if uploaded {
+                        item.verificationState = VerificationState.signed.rawValue
+                        try? store.modelContext.save()
                         verifyViewModel.verify(item: item)
                     }
                 }
@@ -102,6 +111,19 @@ final class LibraryViewModel: ObservableObject {
     }
 
     // MARK: Private
+
+    private func startNetworkMonitoring() {
+        let monitor = NWPathMonitor()
+        networkMonitor = monitor
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.verifyPendingItems(from: self.cachedItems)
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "com.zoe.networkMonitor"))
+    }
 
     private func loadAndInsert(provider: NSItemProvider, typeIdentifier: String, mediaType: String, assetKey: String?) async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
