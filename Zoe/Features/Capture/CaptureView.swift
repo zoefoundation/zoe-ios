@@ -13,21 +13,33 @@ struct CaptureView: View {
     #endif
 
     var body: some View {
-        Group {
-            if viewModel.permissionStatus == .denied || viewModel.permissionStatus == .restricted {
-                permissionDeniedView
-            } else {
-                cameraView
+        ZStack {
+            Group {
+                if viewModel.permissionStatus == .denied || viewModel.permissionStatus == .restricted {
+                    permissionDeniedView
+                } else {
+                    cameraView
+                }
+            }
+
+            if showingLibrary {
+                LibraryView()
+                    .ignoresSafeArea()
+                    .zIndex(1)
+                    .transition(.move(edge: .bottom))
+            }
+
+            if viewModel.permissionStatus != .denied && viewModel.permissionStatus != .restricted {
+                floatingLibraryButton
+                    .zIndex(2)
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: showingLibrary)
         .task { await viewModel.configure(keyManager: appState.keyManager, libraryStore: LibraryStore(modelContext: modelContext)) }
         .onDisappear { viewModel.stopSession() }
         .sensoryFeedback(.selection, trigger: viewModel.captureMode)
         .sensoryFeedback(.impact(weight: .heavy, intensity: 1.0), trigger: viewModel.hapticCaptureTrigger)
         .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.hapticRecordingTrigger)
-        .sheet(isPresented: $showingLibrary) {
-            LibraryView()
-        }
         #if DEBUG
         .sheet(isPresented: $showingDebugView) {
             RegistrationDebugView(keyManager: appState.keyManager)
@@ -97,8 +109,6 @@ struct CaptureView: View {
                         .frame(height: 49)
 
                     HStack {
-                        LibraryThumbnailButton { showingLibrary = true }
-                            .padding(.leading, 20)
                         Spacer()
                         cameraFlipButton
                             .padding(.trailing, 20)
@@ -108,6 +118,25 @@ struct CaptureView: View {
                 .padding(.bottom, -12)
                 .accessibilityIdentifier(AX.Capture.photoVideoToggle)
             }
+        }
+    }
+
+    // MARK: - Floating library/camera button (always on top)
+
+    private var floatingLibraryButton: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            HStack {
+                LibraryThumbnailButton(isInLibrary: showingLibrary) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showingLibrary.toggle()
+                    }
+                }
+                .padding(.leading, 20)
+                Spacer()
+            }
+            .frame(height: 49)
+            .padding(.bottom, -12)
         }
     }
 
@@ -226,26 +255,41 @@ struct CaptureView: View {
 // MARK: - Library thumbnail button
 
 private struct LibraryThumbnailButton: View {
-    @Query(sort: \LibraryItem.capturedAt, order: .reverse) private var items: [LibraryItem]
+    let isInLibrary: Bool
     let action: () -> Void
+    @Query(sort: \LibraryItem.capturedAt, order: .reverse) private var items: [LibraryItem]
     @State private var thumbnail: UIImage?
 
     var body: some View {
         Button(action: action) {
-            Group {
-                if let img = thumbnail {
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFill()
+            ZStack {
+                if isInLibrary {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
-                        .clipShape(Circle())
+                        .background(Circle().fill(Color.white.opacity(0.15)))
                         .overlay(Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1.5))
+                        .transition(.opacity.combined(with: .scale(scale: 0.75)))
                 } else {
-                    Circle()
-                        .strokeBorder(.white.opacity(0.5), lineWidth: 1.5)
-                        .frame(width: 44, height: 44)
+                    Group {
+                        if let img = thumbnail {
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 44, height: 44)
+                                .clipShape(Circle())
+                                .overlay(Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1.5))
+                        } else {
+                            Circle()
+                                .strokeBorder(.white.opacity(0.5), lineWidth: 1.5)
+                                .frame(width: 44, height: 44)
+                        }
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.75)))
                 }
             }
+            .frame(width: 44, height: 44)
         }
         .accessibilityIdentifier(AX.Capture.libraryThumbnailButton)
         .task(id: items.first?.id) { await loadThumbnail() }
