@@ -138,7 +138,12 @@ private struct LibraryViewContent: View {
         ScrollView {
             LazyVGrid(columns: gridColumns, spacing: 1.5) {
                 ForEach(items) { item in
-                    LibraryCell(item: item)
+                    NavigationLink {
+                        MediaDetailView(item: item)
+                    } label: {
+                        LibraryCell(item: item)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

@@ -38,6 +38,7 @@ enum AX {
         static let verifyButton = "media_detail.verify.button"
         static let loading      = "media_detail.loading.loading"
         static let shareButton  = "media_detail.share.button"
+        static let deleteButton = "media_detail.delete.button"
     }
 
     enum Verdict {

@@ -20,4 +20,16 @@ extension VerificationState {
         case .pending:     return "Pending — upload in progress"
         }
     }
+
+    var pillShortLabel: String {
+        switch self {
+        case .signed:      return "Signed"
+        case .unsigned:    return "Unsigned"
+        case .authentic:   return "Authentic"
+        case .tampered:    return "Tampered"
+        case .notVerified: return "Not Verified"
+        case .verifying:   return "Verifying"
+        case .pending:     return "Pending Upload"
+        }
+    }
 }
