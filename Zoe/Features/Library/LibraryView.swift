@@ -17,6 +17,8 @@ struct LibraryView: View {
 private struct LibraryViewContent: View {
     @StateObject private var viewModel: LibraryViewModel
     @Query(sort: \LibraryItem.capturedAt, order: .reverse) private var items: [LibraryItem]
+    @Namespace private var zoomNamespace
+    @State private var navPath: [LibraryItem] = []
 
     private let keyManager: KeyManager
 
@@ -28,7 +30,7 @@ private struct LibraryViewContent: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             VStack(spacing: 0) {
                 filterChipsRow
                 contentBody
@@ -44,7 +46,11 @@ private struct LibraryViewContent: View {
                     .accessibilityIdentifier(AX.Library.importButton)
                 }
             }
+            .navigationDestination(for: LibraryItem.self) { item in
+                MediaDetailView(item: item)
+            }
         }
+        .navigationTransition(.zoom(sourceID: navPath.last?.id ?? UUID(), in: zoomNamespace))
         .accessibilityIdentifier(AX.Library.screenView)
         .task { await viewModel.configure(keyManager: keyManager) }
         .onAppear { viewModel.verifyPendingItems(from: items) }
@@ -131,12 +137,11 @@ private struct LibraryViewContent: View {
         ScrollView {
             LazyVGrid(columns: gridColumns, spacing: 1.5) {
                 ForEach(items) { item in
-                    NavigationLink {
-                        MediaDetailView(item: item)
-                    } label: {
+                    NavigationLink(value: item) {
                         LibraryCell(item: item)
                     }
                     .buttonStyle(.plain)
+                    .matchedTransitionSource(id: item.id, in: zoomNamespace)
                 }
             }
         }

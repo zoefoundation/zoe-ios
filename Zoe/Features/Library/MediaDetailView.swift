@@ -13,6 +13,8 @@ struct MediaDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var navigateToVerdict = false
     @State private var player: AVPlayer?
+    @State private var dragOffset: CGFloat = 0
+    @State private var isDismissGestureActive = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -21,6 +23,12 @@ struct MediaDetailView: View {
                 .padding(.leading, 16)
                 .padding(.top, 14)
         }
+        .offset(y: max(0, dragOffset))
+        .scaleEffect(
+            1.0 - max(0, dragOffset) / 3500.0,
+            anchor: .top
+        )
+        .gesture(dismissDragGesture)
         .accessibilityIdentifier(AX.MediaDetail.screenView)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -48,6 +56,37 @@ struct MediaDetailView: View {
                 player = AVPlayer(url: item.resolvedMediaURL)
             }
         }
+    }
+
+    // MARK: - Drag-to-dismiss gesture
+
+    private var dismissDragGesture: some Gesture {
+        DragGesture(minimumDistance: 20, coordinateSpace: .local)
+            .onChanged { value in
+                let h = value.translation.height
+                let w = value.translation.width
+                if !isDismissGestureActive {
+                    // Only commit to a primarily-downward drag
+                    guard h > 0, abs(h) > abs(w) else { return }
+                    isDismissGestureActive = true
+                }
+                dragOffset = max(0, h)
+            }
+            .onEnded { value in
+                guard isDismissGestureActive else { return }
+                isDismissGestureActive = false
+                let h = value.translation.height
+                let predictedH = value.predictedEndTranslation.height
+                if h > 100 || predictedH > 300 {
+                    // Snap to zero first so NavigationTransition.zoom starts clean
+                    dragOffset = 0
+                    dismiss()
+                } else {
+                    withAnimation(.spring(duration: 0.45, bounce: 0.3)) {
+                        dragOffset = 0
+                    }
+                }
+            }
     }
 
     @ViewBuilder
