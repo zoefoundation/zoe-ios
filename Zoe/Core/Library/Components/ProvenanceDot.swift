@@ -6,7 +6,7 @@ struct ProvenanceDot: View {
     var body: some View {
         Group {
             switch state {
-            case .verifying:
+            case .verifying, .pending:
                 ProgressView()
                     .progressViewStyle(.circular)
                     .tint(.white)

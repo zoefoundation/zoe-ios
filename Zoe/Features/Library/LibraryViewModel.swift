@@ -87,11 +87,16 @@ final class LibraryViewModel: ObservableObject {
             switch VerificationState(rawValue: item.verificationState) {
             case .pending:
                 Task {
+                    // Show spinner immediately while upload+verify runs
+                    item.verificationState = VerificationState.verifying.rawValue
+                    try? store.modelContext.save()
                     let uploaded = await signingPipeline.retryUpload(fileURL: item.resolvedMediaURL)
                     if uploaded {
-                        item.verificationState = VerificationState.signed.rawValue
-                        try? store.modelContext.save()
                         verifyViewModel.verify(item: item)
+                    } else {
+                        // Still offline — revert to pending so it retries on next connection
+                        item.verificationState = VerificationState.pending.rawValue
+                        try? store.modelContext.save()
                     }
                 }
             case .verifying, .signed, .notVerified:
