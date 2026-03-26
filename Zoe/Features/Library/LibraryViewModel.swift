@@ -62,6 +62,22 @@ final class LibraryViewModel: ObservableObject {
         verifyViewModel.verify(item: item)
     }
 
+    /// Re-triggers verification for any item stuck in `.verifying`, `.signed`, or `.notVerified`.
+    /// Called on Library appear and scene-active transitions to recover from:
+    ///   - App killed while verifying (stuck .verifying)
+    ///   - Capture completed online but verify never ran (stuck .signed)
+    ///   - Previous verify failed offline (stuck .notVerified, retries when network returns)
+    func verifyPendingItems(from items: [LibraryItem]) {
+        let pendingStates: Set<String> = [
+            VerificationState.verifying.rawValue,
+            VerificationState.signed.rawValue,
+            VerificationState.notVerified.rawValue
+        ]
+        for item in items where pendingStates.contains(item.verificationState) {
+            verifyViewModel.verify(item: item)
+        }
+    }
+
     func filteredItems(from items: [LibraryItem]) -> [LibraryItem] {
         switch selectedFilter {
         case .all:      return items

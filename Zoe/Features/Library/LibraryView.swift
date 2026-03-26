@@ -17,6 +17,7 @@ private struct LibraryViewContent: View {
     @StateObject private var viewModel: LibraryViewModel
     @Query(sort: \LibraryItem.capturedAt, order: .reverse) private var items: [LibraryItem]
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     init(modelContext: ModelContext) {
         let store = LibraryStore(modelContext: modelContext)
@@ -49,6 +50,10 @@ private struct LibraryViewContent: View {
             }
         }
         .accessibilityIdentifier(AX.Library.screenView)
+        .onAppear { viewModel.verifyPendingItems(from: items) }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { viewModel.verifyPendingItems(from: items) }
+        }
         .onOpenURL { url in
             _ = url.startAccessingSecurityScopedResource()
             defer { url.stopAccessingSecurityScopedResource() }
