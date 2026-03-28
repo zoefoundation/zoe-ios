@@ -2,7 +2,7 @@ import Foundation
 
 // Canonical accessibility identifier constants.
 // All identifiers follow [screen].[element].[role] naming convention.
-// See docs/accessibility-identifiers.md for full spec.
+// See ios/docs/accessibility-identifiers.md for the current iOS doc home.
 enum AX {
     enum Capture {
         static let permissionDeniedView     = "capture.permission_denied.view"
