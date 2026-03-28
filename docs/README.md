@@ -12,6 +12,6 @@ This directory holds iOS-only documentation.
 
 ## Index
 
-- [accessibility-identifiers.md](/Users/comicbit/Projects/zoe_validation_app/ios/docs/accessibility-identifiers.md)
+- [accessibility-identifiers.md](./accessibility-identifiers.md)
 
-Cross-cutting docs stay under [docs/](/Users/comicbit/Projects/zoe_validation_app/docs).
+Cross-cutting docs stay under [docs/](../../docs/).
