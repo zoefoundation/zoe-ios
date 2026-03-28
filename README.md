@@ -15,6 +15,10 @@
   <img alt="Status" src="https://img.shields.io/badge/Status-POC%20%2F%20MVP-yellow">
 </p>
 
+<p align="center">
+  <img alt="Zoe iOS app preview" src="../zoe-app.gif" width="42%">
+</p>
+
 ---
 
 ## What It Does
@@ -29,8 +33,6 @@ The Zoe iOS application is the user-facing boundary of the platform. It is respo
 - storing captured or imported media locally in the app library
 - verifying existing media against the server and presenting a user-readable verdict
 
-The active implementation uses **detached signed proof bundles** uploaded to the backend.
-
 **What the app does not claim:**
 
 - it does not prove that a scene reflects reality
@@ -39,48 +41,20 @@ The active implementation uses **detached signed proof bundles** uploaded to the
 
 ---
 
-## Role In The Platform
+## App Overview
 
-The iOS app is where provenance is created and consumed from the user’s perspective.
+![Zoe iOS flow](./docs/diagrams/ios-flow.svg)
 
-```text
-┌────────────────────────────┐
-│          Zoe iOS           │
-│                            │
-│  Capture UI                │
-│  Library UI                │
-│  Media Detail + Verdict    │
-│  Debug Registration View   │
-│                            │
-│  KeyManager                │
-│  AttestationService        │
-│  SigningPipeline           │
-│  VerificationService       │
-│  APIClient + TLS pinning   │
-└─────────────┬──────────────┘
-              │
-              │ HTTPS
-              ▼
-┌────────────────────────────┐
-│         Zoe Server         │
-│  /v1/challenge             │
-│  /v1/keys/register         │
-│  /api/v1/proofs            │
-│  /v1/verify                │
-└────────────────────────────┘
-```
+Editable source: [ios/docs/diagrams/ios-flow.excalidraw](./docs/diagrams/ios-flow.excalidraw)
 
-### App Responsibilities
+The active app architecture centers on:
 
-| Area | Responsibility |
-|---|---|
-| Capture | In-app photo and video acquisition |
-| Identity | Secure Enclave key lifecycle and `kid` derivation |
-| Attestation | App Attest handshake through the registration flow |
-| Signing | Canonical payload construction and local signature generation |
-| Networking | TLS-pinned communication with the Zoe server |
-| Library | Local persistence of media and verification state |
-| Verification | Proof lookup, server verification request, verdict rendering |
+- in-app capture and library surfaces
+- Secure Enclave key lifecycle managed by `KeyManager`
+- App Attest-backed registration against the Zoe server
+- detached `zoe.media.v1` payload signing and proof upload
+- server-backed verification with verdict rendering
+- certificate-pinned networking and SwiftData-backed persistence
 
 ---
 
@@ -106,58 +80,6 @@ From the app’s perspective, provenance is meaningful only when all of the foll
 | `not_verified` | No proof was found, or verification could not establish authenticity |
 
 > The app is intentionally fail-open for capture. If registration or signing is unavailable, the original media is still preserved rather than blocking the user’s capture flow.
-
----
-
-## Primary Flows
-
-### 1. Registration
-
-```text
-1. App starts and initialises KeyManager
-2. Secure Enclave keypair is loaded or generated
-3. `kid` is derived from the public key DER
-4. App requests a challenge from the server
-5. App Attest produces attestation material
-6. App sends key registration payload to the server
-7. Successful registration unlocks signing
-```
-
-### 2. Capture And Signing
-
-```text
-1. User captures a photo or video inside Zoe
-2. App hashes the final encoded file bytes
-3. App constructs canonical `zoe.media.v1` payload fields
-4. Secure Enclave signs the canonical payload
-5. App uploads the detached proof bundle to the backend
-6. Media is saved locally and to Photos
-```
-
-### 3. Verification
-
-```text
-1. User opens captured or imported media in the Library
-2. App computes the media SHA-256
-3. App looks up a proof by content hash
-4. App requests verification using `proof_id` + content hash
-5. App renders Authentic, Tampered, or Not Verified
-```
-
----
-
-## Current Implementation Status
-
-The application already includes the major POC/MVP surfaces:
-
-- in-app capture for photo and video
-- SwiftData-backed media library
-- detached proof signing and proof upload
-- proof re-upload handling for pending items
-- server-backed verification and verdict UI
-- certificate-pinned API client
-- debug-only registration diagnostics
-- accessibility identifier coverage for the implemented UI surface
 
 ---
 
@@ -188,6 +110,19 @@ The application already includes the major POC/MVP surfaces:
 | Verification | Hash lookup + `/v1/verify` round-trip |
 | Local persistence | SwiftData |
 | Transport security | TLS certificate pinning |
+
+### Current Implementation Status
+
+The application already includes the major POC/MVP surfaces:
+
+- in-app capture for photo and video
+- SwiftData-backed media library
+- detached proof signing and proof upload
+- proof re-upload handling for pending items
+- server-backed verification and verdict UI
+- certificate-pinned API client
+- debug-only registration diagnostics
+- accessibility identifier coverage for the implemented UI surface
 
 ---
 

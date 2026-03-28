@@ -13,5 +13,7 @@ This directory holds iOS-only documentation.
 ## Index
 
 - [accessibility-identifiers.md](./accessibility-identifiers.md)
+- [diagrams/ios-flow.svg](./diagrams/ios-flow.svg)
+- [diagrams/ios-flow.excalidraw](./diagrams/ios-flow.excalidraw)
 
 Cross-cutting docs stay under [docs/](../../docs/).
