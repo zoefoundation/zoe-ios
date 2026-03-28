@@ -1,7 +1,11 @@
 # Xcode generated artifacts
 artifacts/derived-data/
+artifacts/
 DerivedData/
 .build/
 .swiftpm/
 SourcePackages/
 .DS_Store
+*.xcuserstate
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
