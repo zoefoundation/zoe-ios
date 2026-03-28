@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img alt="Zoe iOS app preview" src="../zoe-app.gif" width="42%">
+  <img alt="Zoe iOS app preview" src="./docs/media/zoe-app.gif" width="42%">
 </p>
 
 ---

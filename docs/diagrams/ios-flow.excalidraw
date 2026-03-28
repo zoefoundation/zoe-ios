@@ -713,10 +713,10 @@
     {
       "id": "arrow-registration-api",
       "type": "arrow",
-      "x": 377.77734375,
-      "y": 261.51171875,
+      "x": 385.33203125,
+      "y": 260.4375,
       "width": 510,
-      "height": 105.23828125,
+      "height": 113.1484375,
       "angle": 0,
       "strokeColor": "#2563eb",
       "backgroundColor": "transparent",
@@ -727,13 +727,15 @@
       "opacity": 100,
       "groupIds": [],
       "frameId": null,
-      "roundness": null,
+      "roundness": {
+        "type": 2
+      },
       "seed": 122,
-      "version": 302,
-      "versionNonce": 423990251,
+      "version": 474,
+      "versionNonce": 1771611397,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1774714921597,
+      "updated": 1774716474159,
       "link": null,
       "locked": false,
       "points": [
@@ -746,8 +748,8 @@
           -85.23828125
         ],
         [
-          321.8984375,
-          -85.12109375
+          401.41796875,
+          -93.1484375
         ],
         [
           510,
@@ -759,7 +761,8 @@
       "endBinding": null,
       "startArrowhead": null,
       "endArrowhead": "triangle",
-      "index": "aL"
+      "index": "aL",
+      "elbowed": false
     },
     {
       "id": "arrow-capture-signing",
@@ -778,13 +781,15 @@
       "opacity": 100,
       "groupIds": [],
       "frameId": null,
-      "roundness": null,
+      "roundness": {
+        "type": 2
+      },
       "seed": 123,
-      "version": 236,
-      "versionNonce": 553649189,
+      "version": 237,
+      "versionNonce": 110946245,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1774714914377,
+      "updated": 1774716476541,
       "link": null,
       "locked": false,
       "points": [
@@ -806,7 +811,8 @@
       "endBinding": null,
       "startArrowhead": null,
       "endArrowhead": "triangle",
-      "index": "aM"
+      "index": "aM",
+      "elbowed": false
     },
     {
       "id": "arrow-signing-persistence",

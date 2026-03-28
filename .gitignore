@@ -1,0 +1,7 @@
+# Xcode generated artifacts
+artifacts/derived-data/
+DerivedData/
+.build/
+.swiftpm/
+SourcePackages/
+.DS_Store
