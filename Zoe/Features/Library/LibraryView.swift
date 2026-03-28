@@ -30,7 +30,27 @@ private struct LibraryViewContent: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navPath) {
+        libraryNavigationStack
+            .accessibilityIdentifier(AX.Library.screenView)
+            .task { await viewModel.configure(keyManager: keyManager) }
+            .onAppear { viewModel.verifyPendingItems(from: items) }
+            .onChange(of: items) { _, newItems in viewModel.updateCachedItems(newItems) }
+            .onOpenURL { url in
+                _ = url.startAccessingSecurityScopedResource()
+                defer { url.stopAccessingSecurityScopedResource() }
+                Task { await viewModel.handleIncomingURL(url) }
+            }
+            .sheet(isPresented: $viewModel.showingPicker) {
+                PHPickerRepresentable { results in
+                    Task { await viewModel.handlePickerResult(results) }
+                }
+                .ignoresSafeArea()
+            }
+    }
+
+    @ViewBuilder
+    private var libraryNavigationStack: some View {
+        let navigationStack = NavigationStack(path: $navPath) {
             VStack(spacing: 0) {
                 filterChipsRow
                 contentBody
@@ -50,21 +70,12 @@ private struct LibraryViewContent: View {
                 MediaDetailView(item: item)
             }
         }
-        .navigationTransition(.zoom(sourceID: navPath.last?.id ?? UUID(), in: zoomNamespace))
-        .accessibilityIdentifier(AX.Library.screenView)
-        .task { await viewModel.configure(keyManager: keyManager) }
-        .onAppear { viewModel.verifyPendingItems(from: items) }
-        .onChange(of: items) { _, newItems in viewModel.updateCachedItems(newItems) }
-        .onOpenURL { url in
-            _ = url.startAccessingSecurityScopedResource()
-            defer { url.stopAccessingSecurityScopedResource() }
-            Task { await viewModel.handleIncomingURL(url) }
-        }
-        .sheet(isPresented: $viewModel.showingPicker) {
-            PHPickerRepresentable { results in
-                Task { await viewModel.handlePickerResult(results) }
-            }
-            .ignoresSafeArea()
+
+        if #available(iOS 18.0, *) {
+            navigationStack
+                .navigationTransition(.zoom(sourceID: navPath.last?.id ?? UUID(), in: zoomNamespace))
+        } else {
+            navigationStack
         }
     }
 
@@ -133,16 +144,26 @@ private struct LibraryViewContent: View {
         ScrollView {
             LazyVGrid(columns: gridColumns, spacing: 1.5) {
                 ForEach(items) { item in
-                    NavigationLink(value: item) {
-                        LibraryCell(item: item)
-                    }
-                    .buttonStyle(.plain)
-                    .matchedTransitionSource(id: item.id, in: zoomNamespace)
+                    libraryNavigationLink(for: item)
                 }
             }
         }
         .ignoresSafeArea(edges: .horizontal)
         .accessibilityIdentifier(AX.Library.gridView)
+    }
+
+    @ViewBuilder
+    private func libraryNavigationLink(for item: LibraryItem) -> some View {
+        let link = NavigationLink(value: item) {
+            LibraryCell(item: item)
+        }
+        .buttonStyle(.plain)
+
+        if #available(iOS 18.0, *) {
+            link.matchedTransitionSource(id: item.id, in: zoomNamespace)
+        } else {
+            link
+        }
     }
 }
 

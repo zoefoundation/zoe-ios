@@ -23,20 +23,24 @@
 			<array>
 				<string>public.image</string>
 			</array>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-		</dict>
-		<dict>
-			<key>CFBundleTypeName</key>
+				<key>CFBundleTypeRole</key>
+				<string>Viewer</string>
+				<key>LSHandlerRank</key>
+				<string>Alternate</string>
+			</dict>
+			<dict>
+				<key>CFBundleTypeName</key>
 			<string>Movie</string>
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>public.movie</string>
 			</array>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-		</dict>
-	</array>
+				<key>CFBundleTypeRole</key>
+				<string>Viewer</string>
+				<key>LSHandlerRank</key>
+				<string>Alternate</string>
+			</dict>
+		</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
