@@ -212,7 +212,7 @@ ios/
 - [Accessibility identifiers standard](docs/accessibility-identifiers.md)
 - [Cross-cutting product docs](../docs/README.md)
 - [Spec freeze](../docs/spec-freeze.md)
-- [Schema v2 proposal](../backend/schema-v2-proposal.md)
+- [Schema v2 proposal](../docs/schema-v2-proposal.md)
 
 ---
 
