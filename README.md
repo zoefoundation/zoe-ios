@@ -8,6 +8,14 @@
 </p>
 
 <p align="center">
+  <img alt="Platform" src="https://img.shields.io/badge/Platform-iOS%2017%2B-000000?logo=apple&logoColor=white">
+  <img alt="Swift" src="https://img.shields.io/badge/Swift-5.9%2B-FA7343?logo=swift&logoColor=white">
+  <img alt="Security" src="https://img.shields.io/badge/Security-Secure%20Enclave%20%2B%20App%20Attest-111111?logo=apple&logoColor=white">
+  <img alt="Storage" src="https://img.shields.io/badge/Storage-SwiftData-0A84FF">
+  <img alt="Status" src="https://img.shields.io/badge/Status-POC%20%2F%20MVP-yellow">
+</p>
+
+<p align="center">
   <a href="https://testflight.apple.com/join/tTYqCVAF">
     <img alt="TestFlight" src="docs/media/testflight.png" width="80">
   </a>
@@ -17,14 +25,6 @@
   <a href="https://testflight.apple.com/join/tTYqCVAF">
     <img alt="TestFlight Beta" src="https://img.shields.io/badge/TestFlight-Beta-0A84FF?logo=apple&logoColor=white">
   </a>
-</p>
-
-<p align="center">
-  <img alt="Platform" src="https://img.shields.io/badge/Platform-iOS%2017%2B-000000?logo=apple&logoColor=white">
-  <img alt="Swift" src="https://img.shields.io/badge/Swift-5.9%2B-FA7343?logo=swift&logoColor=white">
-  <img alt="Security" src="https://img.shields.io/badge/Security-Secure%20Enclave%20%2B%20App%20Attest-111111?logo=apple&logoColor=white">
-  <img alt="Storage" src="https://img.shields.io/badge/Storage-SwiftData-0A84FF">
-  <img alt="Status" src="https://img.shields.io/badge/Status-POC%20%2F%20MVP-yellow">
 </p>
 
 <p align="center">
