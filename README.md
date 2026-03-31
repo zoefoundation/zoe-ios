@@ -16,14 +16,13 @@
 </p>
 
 <p align="center">
-  <img alt="Zoe iOS app preview" src="./docs/media/zoe-app.gif" width="42%">
-</p>
-
-<p align="center">
   <a href="https://testflight.apple.com/join/tTYqCVAF">
     <img alt="TestFlight" src="docs/media/testflight.png" width="80">
   </a><br>
   <a href="https://testflight.apple.com/join/tTYqCVAF">Join the beta on TestFlight</a>
+</p>
+<p align="center">
+  <img alt="Zoe iOS app preview" src="./docs/media/zoe-app.gif" width="42%">
 </p>
 
 ---
