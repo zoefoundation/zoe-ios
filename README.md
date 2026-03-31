@@ -21,7 +21,7 @@
 
 <p align="center">
   <a href="https://testflight.apple.com/join/tTYqCVAF">
-    <img alt="TestFlight" src="https://www.macosicongallery.com/icons/testflight-2023-05-19/512.png" width="80">
+    <img alt="TestFlight" src="docs/media/testflight.png" width="80">
   </a><br>
   <a href="https://testflight.apple.com/join/tTYqCVAF">Join the beta on TestFlight</a>
 </p>
