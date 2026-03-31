@@ -17,12 +17,9 @@
 
 <p align="center">
   <a href="https://testflight.apple.com/join/tTYqCVAF">
-    <img alt="TestFlight" src="docs/media/testflight.png" width="80">
+    <img alt="TestFlight" src="https://img.shields.io/badge/TestFlight-Beta-0A84FF?logo=apple&logoColor=white" width="80">
   </a><br>
   <a href="https://testflight.apple.com/join/tTYqCVAF">Join the beta on TestFlight</a>
-</p>
-<p align="center">
-  <img alt="Zoe iOS app preview" src="./docs/media/zoe-app.gif" width="42%">
 </p>
 
 ---
@@ -48,10 +45,6 @@ The Zoe iOS application is the user-facing boundary of the platform. It is respo
 ---
 
 ## App Overview
-
-![Zoe iOS flow](./docs/diagrams/ios-flow.svg)
-
-Editable source: [ios/docs/diagrams/ios-flow.excalidraw](./docs/diagrams/ios-flow.excalidraw)
 
 The active app architecture centers on:
 
@@ -176,40 +169,10 @@ The iOS codebase includes both unit and UI coverage.
 - accessibility identifiers updated and exercised on the simulator
 - real-device validation for registration-sensitive changes
 
-For iOS-specific standards and registry details, see [ios/docs/accessibility-identifiers.md](docs/accessibility-identifiers.md).
-
----
-
-## Project Layout
-
-```text
-ios/
-├── Zoe.xcodeproj
-├── Zoe/
-│   ├── App/
-│   ├── Core/
-│   │   ├── Accessibility/
-│   │   ├── KeyManager/
-│   │   ├── Library/
-│   │   ├── Shared/
-│   │   ├── Signing/
-│   │   └── Verification/
-│   ├── Debug/
-│   ├── Features/
-│   │   ├── Capture/
-│   │   └── Library/
-│   ├── Networking/
-│   └── Assets.xcassets/
-├── ZoeTests/
-└── ZoeUITests/
-```
-
 ---
 
 ## Related Documents
 
-- [iOS docs index](docs/README.md)
-- [Accessibility identifiers standard](docs/accessibility-identifiers.md)
 - [Cross-cutting product docs](../docs/README.md)
 - [Spec freeze](../docs/spec-freeze.md)
 - [Schema v2 proposal](../docs/schema-v2-proposal.md)

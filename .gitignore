@@ -5,6 +5,7 @@ DerivedData/
 .build/
 .swiftpm/
 SourcePackages/
+docs/
 .DS_Store
 *.xcuserstate
 *.xcodeproj/xcuserdata/
