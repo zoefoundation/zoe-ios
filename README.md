@@ -22,6 +22,10 @@
   <a href="https://testflight.apple.com/join/tTYqCVAF">Join the beta on TestFlight</a>
 </p>
 
+<p align="center">
+  <img alt="Zoe iOS app preview" src="./docs/media/zoe-app.gif" width="42%">
+</p>
+
 ---
 
 ## What It Does
@@ -168,14 +172,6 @@ The iOS codebase includes both unit and UI coverage.
 - unit and UI tests passing
 - accessibility identifiers updated and exercised on the simulator
 - real-device validation for registration-sensitive changes
-
----
-
-## Related Documents
-
-- [Cross-cutting product docs](../docs/README.md)
-- [Spec freeze](../docs/spec-freeze.md)
-- [Schema v2 proposal](../docs/schema-v2-proposal.md)
 
 ---
 
