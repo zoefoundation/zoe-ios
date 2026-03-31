@@ -19,6 +19,13 @@
   <img alt="Zoe iOS app preview" src="./docs/media/zoe-app.gif" width="42%">
 </p>
 
+<p align="center">
+  <a href="https://testflight.apple.com/join/tTYqCVAF">
+    <img alt="TestFlight" src="https://www.macosicongallery.com/icons/testflight-2023-05-19/512.png" width="80">
+  </a><br>
+  <a href="https://testflight.apple.com/join/tTYqCVAF">Join the beta on TestFlight</a>
+</p>
+
 ---
 
 ## What It Does
@@ -206,7 +213,7 @@ ios/
 - [Accessibility identifiers standard](docs/accessibility-identifiers.md)
 - [Cross-cutting product docs](../docs/README.md)
 - [Spec freeze](../docs/spec-freeze.md)
-- [Schema v2 proposal](../docs/schema-v2-proposal.md)
+- [Schema v2 proposal](../backend/schema-v2-proposal.md)
 
 ---
 
