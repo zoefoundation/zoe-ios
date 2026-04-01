@@ -1,19 +1,46 @@
 {
   "fill" : {
-    "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+    "linear-gradient" : [
+      "display-p3:0.97973,0.94883,0.95228,1.00000",
+      "display-p3:0.97763,1.00000,0.92727,1.00000"
+    ],
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
   },
   "groups" : [
     {
       "layers" : [
         {
-          "blend-mode" : "normal",
-          "image-name" : "3BCE7A92-1081-4B62-978D-0EF833829BD1.PNG",
-          "name" : "3BCE7A92-1081-4B62-978D-0EF833829BD1",
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "image.png",
+          "name" : "image",
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
               0,
-              0
+              31
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "hidden" : true,
+          "image-name" : "zoe-light.png",
+          "name" : "zoe-light",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              31
             ]
           }
         }
