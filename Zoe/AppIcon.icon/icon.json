@@ -2,7 +2,7 @@
   "fill" : {
     "linear-gradient" : [
       "display-p3:0.97973,0.94883,0.95228,1.00000",
-      "display-p3:0.97763,1.00000,0.92727,1.00000"
+      "display-p3:0.99316,0.99316,0.99316,1.00000"
     ],
     "orientation" : {
       "start" : {
@@ -17,6 +17,7 @@
   },
   "groups" : [
     {
+      "blur-material" : null,
       "layers" : [
         {
           "glass" : false,
@@ -26,21 +27,56 @@
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
-              0,
-              31
+              7.460922691529731,
+              30.52529549970518
             ]
           }
+        }
+      ],
+      "lighting" : "individual",
+      "opacity-specializations" : [
+        {
+          "appearance" : "dark",
+          "value" : 0
         },
         {
+          "appearance" : "tinted",
+          "value" : 0
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
           "glass" : false,
-          "hidden" : true,
+          "hidden" : false,
           "image-name" : "zoe-light.png",
           "name" : "zoe-light",
+          "opacity-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : 1
+            },
+            {
+              "appearance" : "tinted",
+              "value" : 0.7
+            }
+          ],
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
-              0,
-              31
+              7.460922691529731,
+              30.52529549970518
             ]
           }
         }
