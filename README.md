@@ -55,6 +55,8 @@ The Zoe iOS application is the user-facing boundary of the platform. It is respo
 
 ## App Overview
 
+![Zoe iOS flow](./docs/diagrams/ios-flow.svg)
+
 The active app architecture centers on:
 
 - in-app capture and library surfaces
